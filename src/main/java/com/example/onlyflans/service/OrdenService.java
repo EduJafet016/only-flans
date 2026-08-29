@@ -18,13 +18,18 @@ public class OrdenService {
     private final OrdenRepository ordenRepository;
     private final GestorDeInventario gestorDeInventario;
     private final MercadoPagoService mercadoPagoService;
+    private final WhatsAppService whatsAppService; // Inyectamos el servicio de WhatsApp
 
-    public OrdenService(ClienteRepository clienteRepository, OrdenRepository ordenRepository,
-                        GestorDeInventario gestorDeInventario, MercadoPagoService mercadoPagoService) {
+    public OrdenService(ClienteRepository clienteRepository,
+                        OrdenRepository ordenRepository,
+                        GestorDeInventario gestorDeInventario,
+                        MercadoPagoService mercadoPagoService,
+                        WhatsAppService whatsAppService) {
         this.clienteRepository = clienteRepository;
         this.ordenRepository = ordenRepository;
         this.gestorDeInventario = gestorDeInventario;
         this.mercadoPagoService = mercadoPagoService;
+        this.whatsAppService = whatsAppService;
     }
 
     @Transactional
@@ -36,7 +41,7 @@ public class OrdenService {
         // 2. Control de Inventario (Bloqueo Optimista en acción)
         Lote loteAsignado = gestorDeInventario.asignarLoteDisponible(request.getFechaDeseada(), request.getCantidad());
 
-        // 3. Crear Orden
+        // 3. Crear y Persistir la Orden
         Orden orden = new Orden();
         orden.setCliente(cliente);
         orden.setLote(loteAsignado);
@@ -46,7 +51,10 @@ public class OrdenService {
 
         ordenRepository.save(orden);
 
-        // 4. Generar URL de pago
-        return mercadoPagoService.generarLinkDePago(orden);
+        // 4. Orquestación Externa (Generar URL de pago y notificar al cliente)
+        String urlPago = mercadoPagoService.generarLinkDePago(orden);
+        whatsAppService.enviarLinkDePago(request.getTelefono(), urlPago);
+
+        return urlPago;
     }
 }
