@@ -18,7 +18,7 @@
 <main class="max-w-xl mx-auto px-4 py-8 w-full">
     <div class="bg-white rounded-2xl shadow-xl p-8 border border-amber-100">
 
-        <!-- PANEL DE STOCK E INMEDIATA -->
+        <!-- Panel de Stock e Inmediata -->
         <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center">
             <div>
                 <span class="block text-xs font-bold text-amber-800 uppercase">Disponibilidad</span>
@@ -36,17 +36,17 @@
                 <label for="nombre" class="block text-sm font-semibold text-gray-700 mb-1">Nombre completo</label>
                 <input type="text" id="nombre" required
                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                       placeholder="Ej. Edu Jafet">
+                       placeholder="Ej. Juan Perez">
             </div>
 
             <div>
                 <label for="telefono" class="block text-sm font-semibold text-gray-700 mb-1">Teléfono (WhatsApp)</label>
                 <input type="tel" id="telefono" required
                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                       placeholder="Ej. 2282927058">
+                       placeholder="Ej. 123456789">
             </div>
 
-            <!-- SEGURIDAD EN CANTIDAD: Mínimo 1, máximo limitado a la capacidad del lote (3) -->
+            <!-- Seguridad en cantidad (Máximo 3 por lote) -->
             <div>
                 <label for="cantidad" class="block text-sm font-semibold text-gray-700 mb-1">Cantidad de flanes (Máx. 3 por lote)</label>
                 <input type="number" id="cantidad" min="1" max="3" value="1" required
@@ -55,7 +55,7 @@
                 <p class="text-xs text-gray-500 mt-1">Cada hornada produce exactamente 3 unidades.</p>
             </div>
 
-            <!-- CALENDARIO Y BLOQUE DE HORNEADO (REEMPLAZA EL TEXTO LIBRE) -->
+            <!-- Bloques de horneado fijos: 10 AM y 5 PM -->
             <div>
                 <label for="bloqueHorneado" class="block text-sm font-semibold text-gray-700 mb-1">Selecciona Bloque de Horneado</label>
                 <select id="bloqueHorneado" required
@@ -93,13 +93,11 @@
 </footer>
 
 <script>
-    // Blindaje extra para la cantidad (evita negativos o ceros)
     function validarCantidad(input) {
         if (input.value < 1) input.value = 1;
-        if (input.value > 3) input.value = 3; // Límite estricto de la hornada
+        if (input.value > 3) input.value = 3;
     }
 
-    // Simulación de carga de stock inicial
     window.onload = function() {
         setTimeout(() => {
             document.getElementById('stock-inmediato').innerText = "2 Flanes listos para entrega inmediata";
