@@ -3,64 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Only Flans - Panel de Cocina</title>
-    <!-- Tailwind CSS para un diseño limpio y rápido -->
+    <title>Only Flans - Pedidos en Línea</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-amber-50 min-h-screen p-6">
-<div class="max-w-4xl mx-auto">
-    <header class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-amber-900">🍮 Only Flans - Órdenes Activas</h1>
-        <button onclick="cargarOrdenes()" class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition">
-            Actualizar 🔄
-        </button>
-    </header>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between">
 
-    <!-- Contenedor de Órdenes -->
-    <div id="contenedor-ordenes" class="grid gap-4">
-        <!-- Las órdenes se inyectarán aquí mediante JavaScript -->
-        <p class="text-gray-500">Cargando órdenes...</p>
+<!-- Header / Navbar -->
+<header class="bg-amber-900 text-white py-6 shadow-md">
+    <div class="max-w-3xl mx-auto px-4 text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight">🍮 Only Flans</h1>
+        <p class="mt-2 text-amber-200">El flan más cremoso y delicioso, directo a la puerta de tu casa.</p>
     </div>
-</div>
+</header>
 
+<!-- Contenido Principal -->
+<main class="max-w-xl mx-auto px-4 py-10 w-full">
+    <div class="bg-white rounded-2xl shadow-xl p-8 border border-amber-100">
+        <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Haz tu pedido aquí 👇</h2>
+
+        <!-- Formulario de Pedido -->
+        <form id="form-pedido" onsubmit="enviarPedido(event)" class="space-y-4">
+            <div>
+                <label for="nombre" class="block text-sm font-semibold text-gray-700 mb-1">Nombre completo</label>
+                <input type="text" id="nombre" required
+                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                       placeholder="Ej. María Pérez">
+            </div>
+
+            <div>
+                <label for="telefono" class="block text-sm font-semibold text-gray-700 mb-1">Teléfono (WhatsApp)</label>
+                <input type="tel" id="telefono" required
+                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                       placeholder="Ej. 2281234567">
+            </div>
+
+            <div>
+                <label for="cantidad" class="block text-sm font-semibold text-gray-700 mb-1">Cantidad de flanes</label>
+                <input type="number" id="cantidad" min="1" value="1" required
+                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label for="fechaDeseada" class="block text-sm font-semibold text-gray-700 mb-1">Fecha y hora deseada de entrega</label>
+                <input type="text" id="fechaDeseada" required
+                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                       placeholder="Ej. Hoy a las 6:00 PM">
+            </div>
+
+            <button type="submit" id="btn-submit"
+                    class="w-full bg-amber-600 text-white font-bold py-3 rounded-lg hover:bg-amber-700 transition shadow-lg">
+                Confirmar y Pagar 🚀
+            </button>
+        </form>
+
+        <!-- Sección de Respuesta (Oculta por defecto) -->
+        <div id="resultado-pago" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+            <h3 class="text-lg font-bold text-green-800 mb-2">¡Pedido registrado con éxito! 🎉</h3>
+            <p class="text-sm text-gray-600 mb-4">Haz clic en el siguiente botón para completar tu pago de forma segura en MercadoPago:</p>
+            <a id="link-mercado-pago" href="#" target="_blank"
+               class="inline-block bg-blue-600 text-white font-bold px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow">
+                Pagar con MercadoPago 💳
+            </a>
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="text-center py-4 text-xs text-amber-800/60">
+    Only Flans Dark Kitchen &copy; 2026. Todos los derechos reservados.
+</footer>
+
+<!-- Script de conexión con la API -->
 <script>
-    async function cargarOrdenes() {
-        try {
-            const response = await fetch('/api/ordenes');
-            const ordenes = await response.json();
-            const contenedor = document.getElementById('contenedor-ordenes');
+    async function enviarPedido(event) {
+        event.preventDefault();
 
-            if (ordenes.length === 0) {
-                contenedor.innerHTML = `<div class="bg-white p-6 rounded-xl shadow text-center text-gray-500">No hay órdenes pendientes por hora. ¡Todo al día! 🎉</div>`;
-                return;
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = true;
+        btn.innerText = "Procesando pedido...";
+
+        const requestData = {
+            nombre: document.getElementById('nombre').value,
+            telefono: document.getElementById('telefono').value,
+            cantidad: parseInt(document.getElementById('cantidad').value),
+            fechaDeseada: document.getElementById('fechaDeseada').value
+        };
+
+        try {
+            // Se conecta con tu endpoint de Spring Boot
+            const response = await fetch('/api/ordenes/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al procesar la orden en el servidor.");
             }
 
-            contenedor.innerHTML = ordenes.map(orden => `
-                    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-amber-500 flex justify-between items-center">
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-800">Cliente: ${orden.cliente.nombre}</h3>
-                            <p class="text-gray-600">📞 Teléfono: ${orden.cliente.telefono}</p>
-                            <p class="text-gray-600">💰 Monto: $${orden.monto} MXN</p>
-                            <span class="inline-block mt-2 px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
-                                ${orden.estado}
-                            </span>
-                        </div>
-                        <div>
-                            <a href="https://wa.me/521${orden.cliente.telefono}" target="_blank"
-                               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-semibold">
-                               💬 Contactar por WhatsApp
-                            </a>
-                        </div>
-                    </div>
-                `).join('');
+            // El backend responde con la URL de pago de MercadoPago
+            const urlPago = await response.text();
+
+            // Ocultamos el formulario y mostramos el botón de pago
+            document.getElementById('form-pedido').classList.add('hidden');
+            const resultadoDiv = document.getElementById('resultado-pago');
+            resultadoDiv.classList.remove('hidden');
+
+            // Asignación correcta de la URL corregida
+            document.getElementById('link-mercado-pago').href = urlPago;
+
         } catch (error) {
-            console.error("Error al cargar órdenes:", error);
+            alert("Hubo un error al crear tu orden. Por favor intenta de nuevo.");
+            console.error(error);
+            btn.disabled = false;
+            btn.innerText = "Confirmar y Pagar 🚀";
         }
     }
-
-    // Cargar al abrir la página y refrescar cada 30 segundos automáticamente
-    cargarOrdenes();
-    setInterval(cargarOrdenes, 30000);
 </script>
 </body>
 </html>
