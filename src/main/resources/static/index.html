@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Only Flans - Panel de Cocina</title>
+    <!-- Tailwind CSS para un diseño limpio y rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen p-6">
+<div class="max-w-4xl mx-auto">
+    <header class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-amber-900">🍮 Only Flans - Órdenes Activas</h1>
+        <button onclick="cargarOrdenes()" class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition">
+            Actualizar 🔄
+        </button>
+    </header>
+
+    <!-- Contenedor de Órdenes -->
+    <div id="contenedor-ordenes" class="grid gap-4">
+        <!-- Las órdenes se inyectarán aquí mediante JavaScript -->
+        <p class="text-gray-500">Cargando órdenes...</p>
+    </div>
+</div>
+
+<script>
+    async function cargarOrdenes() {
+        try {
+            const response = await fetch('/api/ordenes');
+            const ordenes = await response.json();
+            const contenedor = document.getElementById('contenedor-ordenes');
+
+            if (ordenes.length === 0) {
+                contenedor.innerHTML = `<div class="bg-white p-6 rounded-xl shadow text-center text-gray-500">No hay órdenes pendientes por hora. ¡Todo al día! 🎉</div>`;
+                return;
+            }
+
+            contenedor.innerHTML = ordenes.map(orden => `
+                    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-amber-500 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Cliente: ${orden.cliente.nombre}</h3>
+                            <p class="text-gray-600">📞 Teléfono: ${orden.cliente.telefono}</p>
+                            <p class="text-gray-600">💰 Monto: $${orden.monto} MXN</p>
+                            <span class="inline-block mt-2 px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                                ${orden.estado}
+                            </span>
+                        </div>
+                        <div>
+                            <a href="https://wa.me/521${orden.cliente.telefono}" target="_blank"
+                               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-semibold">
+                               💬 Contactar por WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+        } catch (error) {
+            console.error("Error al cargar órdenes:", error);
+        }
+    }
+
+    // Cargar al abrir la página y refrescar cada 30 segundos automáticamente
+    cargarOrdenes();
+    setInterval(cargarOrdenes, 30000);
+</script>
+</body>
+</html>

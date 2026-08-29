@@ -8,6 +8,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
+
+@GetMapping
+public ResponseEntity<List<Orden>> obtenerOrdenesPendientes() {
+    // Retorna las órdenes con estado PENDIENTE para que la cocina las vea
+    List<Orden> pendientes = ordenRepository.findByEstado(Orden.EstadoOrden.PENDIENTE);
+    return ResponseEntity.ok(pendientes);
+}
+
 @RequestMapping("/api/ordenes")
 public class OrdenController {
 
