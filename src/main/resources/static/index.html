@@ -207,13 +207,24 @@
             const maxCapacidadDefault = 3; // Límite operativo estándar
 
             // Plantilla maestra de la Dark Kitchen
-            const horariosPlantilla = [
-                { id: 'HOY-10:00', titulo: '🔥 Hoy a las 10:00' },
-                { id: 'HOY-17:00', titulo: '🔥 Hoy a las 17:00' },
-                { id: 'MANANA-10:00', titulo: '🔥 Mañana a las 10:00' },
-                { id: 'MANANA-17:00', titulo: '🔥 Mañana a las 17:00' }
-            ];
+            // Obtenemos la hora actual del cliente
+            const ahora = new Date();
+            const horaActual = ahora.getHours();
 
+            // Plantilla maestra dinámica (Filtra el pasado)
+            const horariosPlantilla = [];
+
+            // Solo mostramos los de HOY si aún no pasa la hora de corte
+            if (horaActual < 10) {
+                horariosPlantilla.push({ id: 'HOY-10:00', titulo: '🔥 Hoy a las 10:00 AM' });
+            }
+            if (horaActual < 17) {
+                horariosPlantilla.push({ id: 'HOY-17:00', titulo: '🔥 Hoy a las 5:00 PM' });
+            }
+
+            // Los de mañana siempre están disponibles
+            horariosPlantilla.push({ id: 'MANANA-10:00', titulo: '🔥 Mañana a las 10:00 AM' });
+            horariosPlantilla.push({ id: 'MANANA-17:00', titulo: '🔥 Mañana a las 5:00 PM' });
             let hayBloques = false;
 
             horariosPlantilla.forEach(plantilla => {
