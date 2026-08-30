@@ -18,7 +18,7 @@ public class OrdenService {
     private final OrdenRepository ordenRepository;
     private final GestorDeInventario gestorDeInventario;
     private final MercadoPagoService mercadoPagoService;
-    private final WhatsAppService whatsAppService; // Inyectamos el servicio de WhatsApp
+    private final WhatsAppService whatsAppService;
 
     public OrdenService(ClienteRepository clienteRepository,
                         OrdenRepository ordenRepository,
@@ -38,7 +38,7 @@ public class OrdenService {
         Cliente cliente = clienteRepository.findByTelefono(request.getTelefono())
                 .orElseGet(() -> clienteRepository.save(new Cliente(request.getTelefono(), request.getNombre())));
 
-        // 2. Control de Inventario (Bloqueo Optimista en acción)
+        // 2. Control de Inventario (Recibe el String con la modalidad o bloque seleccionado)
         Lote loteAsignado = gestorDeInventario.asignarLoteDisponible(request.getFechaDeseada(), request.getCantidad());
 
         // 3. Crear y Persistir la Orden
@@ -46,7 +46,7 @@ public class OrdenService {
         orden.setCliente(cliente);
         orden.setLote(loteAsignado);
         orden.setEstado(Orden.EstadoOrden.PENDIENTE);
-        // Precio hardcodeado para la v1 del MVP
+        // Precio base para la v1 del MVP
         orden.setMonto(new BigDecimal("150.00").multiply(new BigDecimal(request.getCantidad())));
 
         ordenRepository.save(orden);
