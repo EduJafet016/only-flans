@@ -45,7 +45,13 @@ public class OrdenService {
         orden.setCliente(cliente);
         orden.setLote(loteAsignado);
         orden.setEstado(Orden.EstadoOrden.PENDIENTE);
-        orden.setMonto(new BigDecimal("150.00").multiply(new BigDecimal(request.getCantidad())));
+
+        // Mapeo de la persistencia de datos faltantes para la base de datos
+        orden.setCantidad(request.getCantidad());
+        orden.setFechaDeseada(request.getFechaDeseada());
+
+        // Ajuste del unitPrice a 250.00 para la preferencia de Mercado Pago y registro interno
+        orden.setMonto(new BigDecimal("250.00").multiply(new BigDecimal(request.getCantidad())));
 
         ordenRepository.save(orden);
 

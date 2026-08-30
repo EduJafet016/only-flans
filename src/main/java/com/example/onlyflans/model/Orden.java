@@ -2,7 +2,6 @@ package com.example.onlyflans.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ordenes")
@@ -12,51 +11,94 @@ public class Orden {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Relación de cardinalidad: Un cliente puede tener múltiples órdenes
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
-    // Relación de cardinalidad: Un lote agrupa un máximo de 3 órdenes
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lote_id", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "lote_id")
     private Lote lote;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "estado", nullable = false)
     private EstadoOrden estado;
 
-    @Column(nullable = false)
+    @Column(name = "monto", precision = 10, scale = 2)
     private BigDecimal monto;
 
-    @Column(name = "fecha_creacion", nullable = false, updatable = false)
-    private LocalDateTime fechaCreacion;
+    @Column(name = "cantidad")
+    private Integer cantidad;
 
-    // Transiciones del ciclo de vida de la orden
+    @Column(name = "fecha_deseada")
+    private String fechaDeseada;
+
+    // Enum interno para el estado de la orden
     public enum EstadoOrden {
         PENDIENTE,
         PAGADO,
-        EN_PRODUCCION,
-        ENTREGADO
+        ENTREGADO,
+        CANCELADO
     }
 
-    public Orden() {}
-
-    // Callback del ciclo de vida JPA para auditar el timestamp de creación
-    @PrePersist
-    protected void onCreate() {
-        this.fechaCreacion = LocalDateTime.now();
+    // Constructor vacío requerido por JPA (Hibernate)
+    public Orden() {
     }
 
-    // Genera los Getters y Setters con IntelliJ (Alt + Insert)
-    public Long getId() { return id; }
-    public Cliente getCliente() { return cliente; }
-    public void setCliente(Cliente cliente) { this.cliente = cliente; }
-    public Lote getLote() { return lote; }
-    public void setLote(Lote lote) { this.lote = lote; }
-    public EstadoOrden getEstado() { return estado; }
-    public void setEstado(EstadoOrden estado) { this.estado = estado; }
-    public BigDecimal getMonto() { return monto; }
-    public void setMonto(BigDecimal monto) { this.monto = monto; }
-    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    // --- Getters y Setters ---
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
+    public Lote getLote() {
+        return lote;
+    }
+
+    public void setLote(Lote lote) {
+        this.lote = lote;
+    }
+
+    public EstadoOrden getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoOrden estado) {
+        this.estado = estado;
+    }
+
+    public BigDecimal getMonto() {
+        return monto;
+    }
+
+    public void setMonto(BigDecimal monto) {
+        this.monto = monto;
+    }
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public String getFechaDeseada() {
+        return fechaDeseada;
+    }
+
+    public void setFechaDeseada(String fechaDeseada) {
+        this.fechaDeseada = fechaDeseada;
+    }
 }
