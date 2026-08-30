@@ -46,7 +46,6 @@
                        placeholder="Ej. 2281234567">
             </div>
 
-            <!-- Seguridad en cantidad (Máximo 3 por transacción) -->
             <div>
                 <label for="cantidad" class="block text-sm font-semibold text-gray-700 mb-1">Cantidad de flanes (Máx. 3)</label>
                 <input type="number" id="cantidad" min="1" max="3" value="1" required
@@ -55,7 +54,6 @@
                 <p class="text-xs text-gray-500 mt-1">Límite operativo de 3 unidades por orden.</p>
             </div>
 
-            <!-- Selector de Tipo de Servicio: Inmediato vs Horneado -->
             <div>
                 <label for="tipoServicio" class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Entrega / Producción</label>
                 <select id="tipoServicio" required onchange="toggleBloqueHorneado(this.value)"
@@ -66,19 +64,17 @@
                 </select>
             </div>
 
-            <!-- Bloques de horneado (Se oculta si elige Inmediata) -->
+            <!-- Nuevo UI Dinámico de Horneado -->
             <div id="seccion-horneado" class="hidden">
-                <label for="bloqueHorneado" class="block text-sm font-semibold text-gray-700 mb-1">Selecciona Bloque de Horneado</label>
-                <select id="bloqueHorneado"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
-                    <option value="">-- Selecciona horario de horno --</option>
-                    <option value="HOY-10:00">🔥 Hoy - Horneada 10:00 AM</option>
-                    <option value="HOY-17:00">🔥 Hoy - Horneada 5:00 PM</option>
-                    <option value="MANANA-10:00">🔥 Mañana - Horneada 10:00 AM</option>
-                    <option value="MANANA-17:00">🔥 Mañana - Horneada 5:00 PM</option>
-                </select>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Selecciona Bloque de Horneado</label>
+                <input type="hidden" id="bloqueHorneadoValue">
+                <button type="button" onclick="abrirModalHorarios()"
+                        class="w-full px-4 py-3 border rounded-lg bg-white text-left flex justify-between items-center hover:bg-gray-50 focus:ring-2 focus:ring-amber-500 focus:outline-none transition shadow-sm">
+                    <span id="texto-horario-elegido" class="text-gray-500">-- Toca para ver horarios disponibles --</span>
+                    <span class="text-xl">📅</span>
+                </button>
                 <p class="text-xs text-amber-800 mt-1 font-medium bg-amber-50 p-2 rounded border border-amber-200">
-                    ⚠️ <strong>Nota:</strong> Esta hora indica cuándo <strong>comienza a hornearse</strong> tu lote. La entrega se realiza posterior al horneado y enfriamiento.
+                    ⚠️ <strong>Nota:</strong> Esta hora indica cuándo <strong>comienza a hornearse</strong> tu lote. La entrega se realiza posterior al enfriamiento.
                 </p>
             </div>
 
@@ -91,7 +87,6 @@
         <div id="resultado-pago" class="hidden mt-6 animate-fade-in">
             <h3 class="text-xl font-extrabold text-center text-green-700 mb-6">¡Orden registrada con éxito! 🎉</h3>
 
-            <!-- Ticket Visual -->
             <div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-5 mb-6 relative shadow-sm">
                 <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3 text-gray-400 text-sm">
                     ✂ - - - - - -
@@ -135,21 +130,35 @@
                 </button>
             </div>
         </div>
+    </div>
 </main>
 
-<!-- Modal Dinámico de Stock (Capa Z superior) -->
+<!-- Modal de Selección Proactiva de Horarios -->
+<div id="modal-seleccion-horario" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 transition-opacity">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 w-full max-w-md border border-amber-100 transform transition-transform">
+        <div class="flex justify-between items-center mb-4 border-b pb-3">
+            <h3 class="text-lg font-extrabold text-amber-900">Selecciona tu bloque 🔥</h3>
+            <button onclick="document.getElementById('modal-seleccion-horario').classList.add('hidden')" class="text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">Estos son los espacios que quedan disponibles en tiempo real en nuestros hornos:</p>
+
+        <div id="lista-horarios-disponibles" class="space-y-3 mb-2 max-h-72 overflow-y-auto pr-2">
+            <!-- Los botones se inyectan dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal Anticolisiones (Malla de seguridad) -->
 <div id="modal-stock" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
     <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-amber-100">
-        <h3 class="text-xl font-extrabold text-red-600 mb-2">¡Ups! Lote sin capacidad 🍮</h3>
-        <p class="text-sm text-gray-600 mb-4">El horario que elegiste no tiene suficientes flanes para tu orden. Aquí tienes los bloques con disponibilidad en tiempo real:</p>
+        <h3 class="text-xl font-extrabold text-red-600 mb-2">¡Ups! Alguien nos ganó 🍮</h3>
+        <p class="text-sm text-gray-600 mb-4">El horario que elegiste se acaba de llenar. Aquí tienes otras opciones actualizadas al segundo:</p>
 
-        <div id="lista-disponibilidad" class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2">
-            <!-- Los bloques disponibles se inyectan dinámicamente aquí -->
-        </div>
+        <div id="lista-disponibilidad-conflicto" class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2"></div>
 
         <button onclick="document.getElementById('modal-stock').classList.add('hidden')"
                 class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg hover:bg-gray-300 transition">
-            Cambiar mi selección
+            Entendido, volver al formulario
         </button>
     </div>
 </div>
@@ -166,15 +175,15 @@
 
     function toggleBloqueHorneado(valor) {
         const seccionHorno = document.getElementById('seccion-horneado');
-        const selectHorno = document.getElementById('bloqueHorneado');
-
         if (valor === 'HORNEADA') {
             seccionHorno.classList.remove('hidden');
-            selectHorno.setAttribute('required', 'true');
+            // UX fluido: abrimos el modal automáticamente al elegir esta modalidad
+            setTimeout(abrirModalHorarios, 100);
         } else {
             seccionHorno.classList.add('hidden');
-            selectHorno.removeAttribute('required');
-            selectHorno.value = "";
+            document.getElementById('bloqueHorneadoValue').value = "";
+            document.getElementById('texto-horario-elegido').innerText = "-- Toca para ver horarios disponibles --";
+            document.getElementById('texto-horario-elegido').className = "text-gray-500";
         }
     }
 
@@ -190,21 +199,92 @@
         }, 500);
     });
 
+    // --- NUEVO FLUJO DE SELECCIÓN ---
+    async function abrirModalHorarios() {
+        document.getElementById('modal-seleccion-horario').classList.remove('hidden');
+        const container = document.getElementById('lista-horarios-disponibles');
+        container.innerHTML = '<p class="text-center text-gray-500 animate-pulse py-4">Buscando espacios en el horno...</p>';
+
+        try {
+            const res = await fetch('/api/ordenes/disponibilidad');
+            const lotes = await res.json();
+            container.innerHTML = '';
+
+            let hayOpciones = false;
+            const fechaHoy = new Date().toLocaleDateString('en-CA');
+
+            lotes.forEach(lote => {
+                const disponibles = lote.capacidadMax - lote.unidadesReservadas;
+                const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
+
+                // Solo listamos los de HORNEADA en este modal
+                if (disponibles > 0 && !esInmediata) {
+                    hayOpciones = true;
+                    const dia = (lote.fecha === fechaHoy) ? 'HOY' : 'MANANA';
+                    const hora = lote.horaCorte.substring(0, 5);
+                    const valorBloque = `${dia}-${hora}`;
+                    const titulo = `🔥 ${dia === 'HOY' ? 'Hoy' : 'Mañana'} a las ${hora}`;
+
+                    container.innerHTML += `
+                        <button type="button" onclick="seleccionarHorarioDesdeModal('${valorBloque}', '${titulo}', ${disponibles})"
+                                class="w-full flex justify-between items-center p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 transition shadow-sm cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <span class="font-bold text-amber-950 text-sm tracking-wide">${titulo}</span>
+                            <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white bg-opacity-80 text-amber-900 shadow-sm border border-amber-100">
+                                ${disponibles} lugares
+                            </span>
+                        </button>
+                    `;
+                }
+            });
+
+            if (!hayOpciones) {
+                container.innerHTML = '<div class="p-4 bg-red-50 border border-red-200 rounded-lg"><p class="text-red-700 font-bold text-center text-sm">Los hornos están llenos por hoy. Revisa más tarde.</p></div>';
+            }
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500 text-center font-bold">Error de conexión. Intenta de nuevo.</p>';
+        }
+    }
+
+    function seleccionarHorarioDesdeModal(valor, titulo, maxDisponibles) {
+        // Cierra el modal
+        document.getElementById('modal-seleccion-horario').classList.add('hidden');
+
+        // Actualiza el formulario visualmente y en el input oculto
+        document.getElementById('bloqueHorneadoValue').value = valor;
+        const textoUI = document.getElementById('texto-horario-elegido');
+        textoUI.innerText = titulo;
+        textoUI.className = "text-amber-900 font-extrabold text-sm uppercase tracking-wide";
+
+        // Auto-ajusta la cantidad si piden más de lo que queda
+        const inputCantidad = document.getElementById('cantidad');
+        if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
+            inputCantidad.value = maxDisponibles;
+            alert(`⚠️ Solo quedan ${maxDisponibles} lugares en el bloque de ${titulo}. Ajustamos tu cantidad automáticamente.`);
+        }
+    }
+    // --------------------------------
+
     async function enviarPedido(event) {
         event.preventDefault();
+
+        const tipoServicio = document.getElementById('tipoServicio').value;
+        const inputHorneado = document.getElementById('bloqueHorneadoValue').value;
+
+        // Validación estricta del front-end
+        if (tipoServicio === 'HORNEADA' && !inputHorneado) {
+            alert("⚠️ Por favor, selecciona un bloque de horneado válido tocando el botón 'Elegir horario'.");
+            return;
+        }
 
         const btn = document.getElementById('btn-submit');
         btn.disabled = true;
         btn.innerText = "Procesando orden...";
 
-        const tipoServicio = document.getElementById('tipoServicio').value;
-        const detalleHorario = tipoServicio === 'INMEDIATA' ? 'INMEDIATA' : document.getElementById('bloqueHorneado').value;
-
         const requestData = {
             nombre: document.getElementById('nombre').value,
             telefono: document.getElementById('telefono').value,
             cantidad: parseInt(document.getElementById('cantidad').value, 10),
-            fechaDeseada: detalleHorario
+            fechaDeseada: tipoServicio === 'INMEDIATA' ? 'INMEDIATA' : inputHorneado
         };
 
         try {
@@ -216,7 +296,8 @@
 
             if (!response.ok) {
                 if (response.status === 409) {
-                    await cargarModalDisponibilidad();
+                    // Malla de seguridad: Alguien nos ganó el último lugar mientras llenábamos el formulario
+                    await cargarModalConflicto();
                 } else {
                     alert("Hubo un error de servidor. Intenta de nuevo.");
                 }
@@ -226,41 +307,46 @@
             }
 
             const urlPago = await response.text();
-
-            // --- NUEVO: Lógica de llenado del Ticket ---
-            const cantidadSeleccionada = parseInt(document.getElementById('cantidad').value, 10);
-            const totalCalculado = cantidadSeleccionada * 250; // Asumiendo $250 por unidad
-
-            let textoHorario = "⚡ Entrega Inmediata";
-            if (tipoServicio !== 'INMEDIATA') {
-                const selectHorno = document.getElementById('bloqueHorneado');
-                textoHorario = selectHorno.options[selectHorno.selectedIndex].text;
-            }
-
-            document.getElementById('ticket-cantidad').innerText = cantidadSeleccionada;
-            document.getElementById('ticket-horario').innerText = textoHorario;
-            document.getElementById('ticket-total').innerText = `$${totalCalculado.toFixed(2)} MXN`;
-            // -------------------------------------------
-
-            document.getElementById('form-pedido').classList.add('hidden');
-            const resultadoDiv = document.getElementById('resultado-pago');
-            resultadoDiv.classList.remove('hidden');
-            document.getElementById('link-mercado-pago').href = urlPago;
+            generarTicketVisual(requestData.cantidad, tipoServicio, inputHorneado, urlPago);
 
         } catch (error) {
             alert("Hubo un error de conexión al procesar tu orden.");
-            console.error(error);
             btn.disabled = false;
             btn.innerText = "Confirmar y Pagar 💳";
         }
     }
 
-    async function cargarModalDisponibilidad() {
+    function generarTicketVisual(cantidad, tipoServicio, valorHorneado, urlPago) {
+        const totalCalculado = cantidad * 250;
+        let textoHorario = "⚡ Entrega Inmediata";
+
+        if (tipoServicio !== 'INMEDIATA') {
+            textoHorario = document.getElementById('texto-horario-elegido').innerText;
+        }
+
+        document.getElementById('ticket-cantidad').innerText = cantidad;
+        document.getElementById('ticket-horario').innerText = textoHorario;
+        document.getElementById('ticket-total').innerText = `$${totalCalculado.toFixed(2)} MXN`;
+
+        document.getElementById('form-pedido').classList.add('hidden');
+        document.getElementById('resultado-pago').classList.remove('hidden');
+        document.getElementById('link-mercado-pago').href = urlPago;
+    }
+
+    function cancelarYVolver() {
+        document.getElementById('resultado-pago').classList.add('hidden');
+        document.getElementById('form-pedido').classList.remove('hidden');
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = false;
+        btn.innerText = "Confirmar y Pagar 💳";
+    }
+
+    // Modal secundario solo para colisiones de último milisegundo (409)
+    async function cargarModalConflicto() {
         try {
             const res = await fetch('/api/ordenes/disponibilidad');
             const lotes = await res.json();
-
-            const container = document.getElementById('lista-disponibilidad');
+            const container = document.getElementById('lista-disponibilidad-conflicto');
             container.innerHTML = '';
 
             let hayOpciones = false;
@@ -268,89 +354,28 @@
 
             lotes.forEach(lote => {
                 const disponibles = lote.capacidadMax - lote.unidadesReservadas;
-
                 if (disponibles > 0) {
                     hayOpciones = true;
                     const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
+                    let titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${(lote.fecha === fechaHoy) ? 'Hoy' : 'Mañana'} - ${lote.horaCorte.substring(0, 5)}`;
 
-                    let tipoServicio = esInmediata ? 'INMEDIATA' : 'HORNEADA';
-                    let valorBloque = 'INMEDIATA';
-                    let titulo = '⚡ Entrega Inmediata';
-                    let colorClass = 'bg-green-50 hover:bg-green-100 border-green-200 text-green-900';
-
-                    if (!esInmediata) {
-                        const dia = (lote.fecha === fechaHoy) ? 'HOY' : 'MANANA';
-                        const hora = lote.horaCorte.substring(0, 5);
-                        valorBloque = `${dia}-${hora}`;
-                        titulo = `🔥 ${dia === 'HOY' ? 'Hoy' : 'Mañana'} - ${hora}`;
-                        colorClass = 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-950';
-                    }
-
-                    // NUEVO: Pasamos la variable 'disponibles' a la función
                     container.innerHTML += `
-                        <button type="button" onclick="aplicarLoteAlternativo('${tipoServicio}', '${valorBloque}', ${disponibles})"
-                                class="w-full flex justify-between items-center p-3 rounded-lg border shadow-sm transition cursor-pointer mb-2 ${colorClass}">
-                            <span class="font-bold text-sm">${titulo}</span>
-                            <span class="text-xs font-extrabold px-3 py-1 rounded-full bg-white bg-opacity-70 shadow-inner">
-                                ${disponibles} disponibles
+                        <div class="flex justify-between items-center p-3 rounded-lg border border-gray-200 bg-gray-50 shadow-sm mb-2">
+                            <span class="font-bold text-sm text-gray-800">${titulo}</span>
+                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-white border border-gray-300">
+                                ${disponibles} disp.
                             </span>
-                        </button>
+                        </div>
                     `;
                 }
             });
 
-            if (!hayOpciones) {
-                container.innerHTML = '<p class="text-red-500 font-bold text-center">Agotado por completo el día de hoy. Vuelve mañana.</p>';
-            }
-
+            if (!hayOpciones) container.innerHTML = '<p class="text-red-500 font-bold text-center">Todo agotado.</p>';
             document.getElementById('modal-stock').classList.remove('hidden');
-        } catch (error) {
-            console.error("Error de red al cargar disponibilidad:", error);
+        } catch (e) {
+            console.error(e);
         }
     }
-
-    // Recibe la cantidad máxima disponible del bloque seleccionado
-    function aplicarLoteAlternativo(tipo, valorBloque, maxDisponibles) {
-        document.getElementById('modal-stock').classList.add('hidden');
-
-        // --- NUEVO: Ajuste de stock inteligente ---
-        const inputCantidad = document.getElementById('cantidad');
-        if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
-            inputCantidad.value = maxDisponibles;
-            alert(`⚠️ Solo quedan ${maxDisponibles} flanes en este horario. Hemos ajustado tu pedido automáticamente para que no te quedes sin postre.`);
-        }
-        // ------------------------------------------
-
-        const selectTipo = document.getElementById('tipoServicio');
-        selectTipo.value = tipo;
-        toggleBloqueHorneado(tipo);
-
-        if (tipo === 'HORNEADA') {
-            const selectHorno = document.getElementById('bloqueHorneado');
-
-            const opcionExiste = Array.from(selectHorno.options).some(opt => opt.value === valorBloque);
-            if (!opcionExiste) {
-                selectHorno.add(new Option(`🔥 Horario Reasignado: ${valorBloque}`, valorBloque));
-            }
-
-            selectHorno.value = valorBloque;
-        }
-
-        // Auto-submit para ejecutar la compra
-        document.getElementById('btn-submit').click();
-    }
-
-    function cancelarYVolver() {
-        // Ocultar el ticket y volver a mostrar el formulario
-        document.getElementById('resultado-pago').classList.add('hidden');
-        document.getElementById('form-pedido').classList.remove('hidden');
-
-        // Restaurar el estado del botón principal
-        const btn = document.getElementById('btn-submit');
-        btn.disabled = false;
-        btn.innerText = "Confirmar y Pagar 💳";
-    }
-
 </script>
 </body>
 </html>
