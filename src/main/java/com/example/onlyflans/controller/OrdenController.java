@@ -19,7 +19,7 @@ public class OrdenController {
 
     private final OrdenService ordenService;
     private final OrdenRepository ordenRepository;
-    private final LoteRepository loteRepository; // Inyectado para consultar stock
+    private final LoteRepository loteRepository;
 
     public OrdenController(OrdenService ordenService, OrdenRepository ordenRepository, LoteRepository loteRepository) {
         this.ordenService = ordenService;
@@ -45,13 +45,34 @@ public class OrdenController {
         return ResponseEntity.ok(ordenRepository.findAll());
     }
 
-    // Nuevo endpoint para que el panel web renderice las opciones disponibles
     @GetMapping("/disponibilidad")
     public ResponseEntity<List<Lote>> obtenerDisponibilidad() {
         return ResponseEntity.ok(loteRepository.findAll());
     }
 
-    // Endpoint Webhook para MercadoPago (se mantiene igual)
+    // Endpoint para liberar el stock de inmediato si el usuario cancela en el frontend
+    @PostMapping("/cancelar-reciente")
+    public ResponseEntity<?> cancelarOrdenInmediata(@RequestBody Map<String, String> payload) {
+        String telefono = payload.get("telefono");
+
+        // Uso del tipado estricto (Enum) y el JOIN dinámico por nombre de método
+        Orden ordenReciente = ordenRepository.findFirstByClienteTelefonoAndEstadoOrderByFechaCreacionDesc(telefono, Orden.EstadoOrden.PENDIENTE);
+
+        if (ordenReciente != null) {
+            Lote lote = ordenReciente.getLote();
+            if (lote != null) {
+                // Se devuelve el stock a la cocina
+                lote.setUnidadesReservadas(lote.getUnidadesReservadas() - ordenReciente.getCantidad());
+                loteRepository.save(lote);
+            }
+            // Se mata la orden
+            ordenReciente.setEstado(Orden.EstadoOrden.CANCELADA);
+            ordenRepository.save(ordenReciente);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/webhook")
     public ResponseEntity<String> recibirWebhookMercadoPago(
             @RequestParam(value = "type", required = false) String tipo,
