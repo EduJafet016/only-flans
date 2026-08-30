@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Only Flans - Panel de Cocina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between">
+
+<header class="bg-amber-900 text-white py-6 shadow-md">
+    <div class="max-w-5xl mx-auto px-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-extrabold tracking-tight">🍮 Only Flans - Cocina</h1>
+            <p class="text-xs text-amber-200 mt-1">Monitoreo de lotes y órdenes en tiempo real</p>
+        </div>
+        <button onclick="cargarOrdenes()" class="bg-amber-700 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition shadow">
+            🔄 Actualizar
+        </button>
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-8 w-full flex-grow">
+
+    <!-- Tarjetas de Resumen / Horarios de Hornada -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
+            <span class="text-xs font-bold text-amber-800 uppercase">⚡ Entrega Inmediata</span>
+            <h2 id="contador-inmediata" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+        </div>
+        <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
+            <span class="text-xs font-bold text-amber-800 uppercase">🔥 Horneada 10:00 AM</span>
+            <h2 id="contador-10" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+        </div>
+        <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
+            <span class="text-xs font-bold text-amber-800 uppercase">🔥 Horneada 5:00 PM</span>
+            <h2 id="contador-17" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+        </div>
+    </div>
+
+    <!-- Listado de Órdenes -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 border border-amber-100">
+        <h2 class="text-xl font-bold text-amber-900 mb-4">Órdenes Registradas 📋</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="border-b border-amber-200 text-xs text-amber-900 uppercase bg-amber-50">
+                    <th class="p-3">Cliente</th>
+                    <th class="p-3">Teléfono</th>
+                    <th class="p-3">Cant.</th>
+                    <th class="p-3">Modalidad / Bloque</th>
+                    <th class="p-3">Pago</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-ordenes" class="text-sm text-gray-700 divide-y divide-amber-100">
+                <tr>
+                    <td colspan="5" class="p-4 text-center text-gray-500">Cargando órdenes...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer class="text-center py-4 text-xs text-amber-800/60">
+    Only Flans Admin &copy; 2026. Control Operativo Dark Kitchen.
+</footer>
+
+<script>
+    async function cargarOrdenes() {
+        try {
+            // Endpoint que lista las órdenes de tu backend
+            const response = await fetch('/api/ordenes');
+            if (!response.ok) throw new Error("Error al obtener las órdenes");
+
+            const ordenes = await response.json();
+            const tbody = document.getElementById('tabla-ordenes');
+            tbody.innerHTML = '';
+
+            if (ordenes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay órdenes registradas aún.</td></tr>`;
+                return;
+            }
+
+            let cInmediata = 0;
+            let c10 = 0;
+            let c17 = 0;
+
+            ordenes.forEach(orden => {
+                const modalidad = orden.fechaDeseada || 'INMEDIATA';
+                if (modalidad === 'INMEDIATA') cInmediata += orden.cantidad;
+                else if (modalidad.includes('10:00')) c10 += orden.cantidad;
+                else if (modalidad.includes('17:00')) c17 += orden.cantidad;
+
+                const badgePago = orden.estado === 'PAGADA'
+                    ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">PAGADA</span>'
+                    : '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">PENDIENTE</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                        <td class="p-3 font-semibold text-gray-900">${orden.cliente ? orden.cliente.nombre : 'N/D'}</td>
+                        <td class="p-3">${orden.cliente ? orden.cliente.telefono : 'N/D'}</td>
+                        <td class="p-3 font-bold">${orden.cantidad}</td>
+                        <td class="p-3"><span class="px-2 py-1 bg-amber-100 text-amber-900 rounded text-xs font-medium">${modalidad}</span></td>
+                        <td class="p-3">${badgePago}</td>
+                    `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('contador-inmediata').innerText = `${cInmediata} flanes`;
+            document.getElementById('contador-10').innerText = `${c10} flanes`;
+            document.getElementById('contador-17').innerText = `${c17} flanes`;
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('tabla-ordenes').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error de conexión con el servidor.</td></tr>`;
+        }
+    }
+
+    // Cargar al iniciar y refrescar cada 15 segundos automáticamente
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarOrdenes();
+        setInterval(cargarOrdenes, 15000);
+    });
+</script>
+</body>
+</html>

@@ -6,6 +6,8 @@ import com.example.onlyflans.model.Lote;
 import com.example.onlyflans.model.Orden;
 import com.example.onlyflans.repository.ClienteRepository;
 import com.example.onlyflans.repository.OrdenRepository;
+import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.resources.payment.Payment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,27 +36,48 @@ public class OrdenService {
 
     @Transactional
     public String procesarNuevaOrden(OrdenRequest request) {
-        // 1. Resolver Cliente
         Cliente cliente = clienteRepository.findByTelefono(request.getTelefono())
                 .orElseGet(() -> clienteRepository.save(new Cliente(request.getTelefono(), request.getNombre())));
 
-        // 2. Control de Inventario (Recibe el String con la modalidad o bloque seleccionado)
         Lote loteAsignado = gestorDeInventario.asignarLoteDisponible(request.getFechaDeseada(), request.getCantidad());
 
-        // 3. Crear y Persistir la Orden
         Orden orden = new Orden();
         orden.setCliente(cliente);
         orden.setLote(loteAsignado);
         orden.setEstado(Orden.EstadoOrden.PENDIENTE);
-        // Precio base para la v1 del MVP
         orden.setMonto(new BigDecimal("150.00").multiply(new BigDecimal(request.getCantidad())));
 
         ordenRepository.save(orden);
 
-        // 4. Orquestación Externa (Generar URL de pago y notificar al cliente)
         String urlPago = mercadoPagoService.generarLinkDePago(orden);
         whatsAppService.enviarLinkDePago(request.getTelefono(), urlPago);
 
         return urlPago;
+    }
+
+    @Transactional
+    public void procesarNotificacionPago(String paymentId) {
+        try {
+            PaymentClient client = new PaymentClient();
+            Payment mpPayment = client.get(Long.parseLong(paymentId));
+
+            if ("approved".equals(mpPayment.getStatus())) {
+                String externalRef = mpPayment.getExternalReference();
+                if (externalRef != null) {
+                    Long ordenId = Long.parseLong(externalRef);
+
+                    Orden orden = ordenRepository.findById(ordenId).orElse(null);
+                    if (orden != null && orden.getEstado() != Orden.EstadoOrden.PAGADO) {
+                        orden.setEstado(Orden.EstadoOrden.PAGADO);
+                        ordenRepository.save(orden);
+
+                        String mensaje = "¡Pago confirmado! 🍮 Tu orden en Only Flans está asegurada en el lote correspondiente.";
+                        whatsAppService.enviarLinkDePago(orden.getCliente().getTelefono(), mensaje);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error procesando webhook de pago: " + e.getMessage());
+        }
     }
 }
