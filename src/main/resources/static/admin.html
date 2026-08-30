@@ -107,6 +107,13 @@
                 return;
             }
 
+            // Ordenar: Primero los que tengan estado 'PAGADO'
+            ordenes.sort((a, b) => {
+                if (a.estado === 'PAGADO' && b.estado !== 'PAGADO') return -1;
+                if (a.estado !== 'PAGADO' && b.estado === 'PAGADO') return 1;
+                return 0;
+            });
+
             let cInmediata = 0, c10 = 0, c17 = 0;
 
             ordenes.forEach(orden => {
@@ -144,7 +151,6 @@
         try {
             let response = await fetch('/api/lotes');
             if (!response.ok) {
-                // Intento alternativo por si el backend usa prefijo de versión
                 response = await fetch('/api/v1/lotes');
                 if (!response.ok) throw new Error();
             }
