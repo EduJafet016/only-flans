@@ -141,7 +141,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Simulador visual rápido en carga inicial. Idealmente, consumirás el endpoint GET /api/ordenes/disponibilidad aquí también.
         setTimeout(() => {
             const stockEl = document.getElementById('stock-inmediato');
             const badgeEl = document.getElementById('badge-estado');
@@ -179,7 +178,6 @@
 
             if (!response.ok) {
                 if (response.status === 409) {
-                    // 409 Conflict: Intercepción de capa de negocio para re-dirigir a otras franjas horarias
                     await cargarModalDisponibilidad();
                 } else {
                     alert("Hubo un error de servidor. Intenta de nuevo.");
@@ -212,24 +210,38 @@
             container.innerHTML = '';
 
             let hayOpciones = false;
+            // Obtenemos la fecha local del cliente para saber si el lote es de HOY o MAÑANA
+            const fechaHoy = new Date().toLocaleDateString('en-CA');
 
             lotes.forEach(lote => {
                 const disponibles = lote.capacidadMax - lote.unidadesReservadas;
 
                 if (disponibles > 0) {
                     hayOpciones = true;
-                    // Jackson serializa LocalTime a string, ej: "23:59:00"
                     const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
-                    const titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${lote.fecha} - ${lote.horaCorte.substring(0,5)}`;
-                    const color = esInmediata ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
 
+                    let tipoServicio = esInmediata ? 'INMEDIATA' : 'HORNEADA';
+                    let valorBloque = 'INMEDIATA';
+                    let titulo = '⚡ Entrega Inmediata';
+                    let colorClass = 'bg-green-50 hover:bg-green-100 border-green-200 text-green-900';
+
+                    if (!esInmediata) {
+                        const dia = (lote.fecha === fechaHoy) ? 'HOY' : 'MANANA';
+                        const hora = lote.horaCorte.substring(0, 5); // Ej: "10:00"
+                        valorBloque = `${dia}-${hora}`;
+                        titulo = `🔥 ${dia === 'HOY' ? 'Hoy' : 'Mañana'} - ${hora}`;
+                        colorClass = 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-950';
+                    }
+
+                    // Renderizamos un <button> en lugar de un <div> para habilitar interacción nativa
                     container.innerHTML += `
-                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-                            <span class="font-bold text-gray-800 text-sm">${titulo}</span>
-                            <span class="text-xs font-bold px-3 py-1 rounded-full ${color}">
+                        <button type="button" onclick="aplicarLoteAlternativo('${tipoServicio}', '${valorBloque}')"
+                                class="w-full flex justify-between items-center p-3 rounded-lg border shadow-sm transition cursor-pointer mb-2 ${colorClass}">
+                            <span class="font-bold text-sm">${titulo}</span>
+                            <span class="text-xs font-extrabold px-3 py-1 rounded-full bg-white bg-opacity-70 shadow-inner">
                                 ${disponibles} disponibles
                             </span>
-                        </div>
+                        </button>
                     `;
                 }
             });
@@ -240,8 +252,32 @@
 
             document.getElementById('modal-stock').classList.remove('hidden');
         } catch (error) {
-            console.error("No se pudo cargar la red de disponibilidad", error);
+            console.error("Error de red al cargar disponibilidad:", error);
         }
+    }
+
+    // Nueva función para mutar el DOM y re-lanzar la petición
+    function aplicarLoteAlternativo(tipo, valorBloque) {
+        document.getElementById('modal-stock').classList.add('hidden');
+
+        const selectTipo = document.getElementById('tipoServicio');
+        selectTipo.value = tipo;
+        toggleBloqueHorneado(tipo);
+
+        if (tipo === 'HORNEADA') {
+            const selectHorno = document.getElementById('bloqueHorneado');
+
+            // Si el backend devolvió un horario huérfano (ej. un test a las 14:00) que no existe en el HTML estático, lo inyectamos al vuelo.
+            const opcionExiste = Array.from(selectHorno.options).some(opt => opt.value === valorBloque);
+            if (!opcionExiste) {
+                selectHorno.add(new Option(`🔥 Horario Reasignado: ${valorBloque}`, valorBloque));
+            }
+
+            selectHorno.value = valorBloque;
+        }
+
+        // Auto-submit para ejecutar la compra instantáneamente
+        document.getElementById('btn-submit').click();
     }
 </script>
 </body>
