@@ -196,53 +196,66 @@
     async function abrirModalHorarios() {
         document.getElementById('modal-seleccion-horario').classList.remove('hidden');
         const container = document.getElementById('lista-horarios-disponibles');
-        container.innerHTML = '<p class="text-center text-gray-500 animate-pulse py-4">Buscando espacios en el horno...</p>';
+        container.innerHTML = '<p class="text-center text-gray-500 animate-pulse py-4">Sincronizando hornos...</p>';
 
         try {
             const res = await fetch('/api/ordenes/disponibilidad');
-            const lotes = await res.json();
+            const lotesDb = await res.json();
             container.innerHTML = '';
 
-            let hayBloques = false;
             const fechaHoy = new Date().toLocaleDateString('en-CA');
+            const maxCapacidadDefault = 3; // Límite operativo estándar
 
-            lotes.forEach(lote => {
-                const disponibles = lote.capacidadMax - lote.unidadesReservadas;
-                const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
+            // Plantilla maestra de la Dark Kitchen
+            const horariosPlantilla = [
+                { id: 'HOY-10:00', titulo: '🔥 Hoy a las 10:00' },
+                { id: 'HOY-17:00', titulo: '🔥 Hoy a las 17:00' },
+                { id: 'MANANA-10:00', titulo: '🔥 Mañana a las 10:00' },
+                { id: 'MANANA-17:00', titulo: '🔥 Mañana a las 17:00' }
+            ];
 
-                if (!esInmediata) {
+            let hayBloques = false;
+
+            horariosPlantilla.forEach(plantilla => {
+                // Buscamos si el lote ya fue inicializado en la BD por alguna orden previa
+                const loteExistente = lotesDb.find(l => {
+                    const lDia = (l.fecha === fechaHoy) ? 'HOY' : 'MANANA';
+                    const lHora = l.horaCorte.substring(0, 5);
+                    return `${lDia}-${lHora}` === plantilla.id;
+                });
+
+                // Si existe en BD, calculamos el stock real. Si no, tiene el cupo virgen (3).
+                let disponibles = maxCapacidadDefault;
+                if (loteExistente) {
+                    disponibles = loteExistente.capacidadMax - loteExistente.unidadesReservadas;
+                }
+
+                if (disponibles > 0) {
                     hayBloques = true;
-                    const dia = (lote.fecha === fechaHoy) ? 'HOY' : 'MANANA';
-                    const hora = lote.horaCorte.substring(0, 5);
-                    const valorBloque = `${dia}-${hora}`;
-                    const titulo = `🔥 ${dia === 'HOY' ? 'Hoy' : 'Mañana'} a las ${hora}`;
-
-                    if (disponibles > 0) {
-                        container.innerHTML += `
-                            <button type="button" onclick="seleccionarHorarioDesdeModal('${valorBloque}', '${titulo}', ${disponibles})"
-                                    class="w-full flex justify-between items-center p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 transition shadow-sm cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2">
-                                <span class="font-bold text-amber-950 text-sm tracking-wide">${titulo}</span>
-                                <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white bg-opacity-80 text-amber-900 shadow-sm border border-amber-100">
-                                    ${disponibles} lugares
-                                </span>
-                            </button>
-                        `;
-                    } else {
-                        container.innerHTML += `
-                            <button disabled type="button"
-                                    class="w-full flex justify-between items-center p-4 rounded-xl border border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed text-left mb-2">
-                                <span class="font-bold text-gray-500 text-sm tracking-wide line-through">${titulo}</span>
-                                <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-gray-200 text-gray-500 shadow-inner border border-gray-300">
-                                    Agotado
-                                </span>
-                            </button>
-                        `;
-                    }
+                    container.innerHTML += `
+                        <button type="button" onclick="seleccionarHorarioDesdeModal('${plantilla.id}', '${plantilla.titulo}', ${disponibles})"
+                                class="w-full flex justify-between items-center p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 transition shadow-sm cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-amber-400 mb-2">
+                            <span class="font-bold text-amber-950 text-sm tracking-wide">${plantilla.titulo}</span>
+                            <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white bg-opacity-80 text-amber-900 shadow-sm border border-amber-100">
+                                ${disponibles} lugares
+                            </span>
+                        </button>
+                    `;
+                } else {
+                    container.innerHTML += `
+                        <button disabled type="button"
+                                class="w-full flex justify-between items-center p-4 rounded-xl border border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed text-left mb-2">
+                            <span class="font-bold text-gray-500 text-sm tracking-wide line-through">${plantilla.titulo}</span>
+                            <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-gray-200 text-gray-500 shadow-inner border border-gray-300">
+                                Agotado
+                            </span>
+                        </button>
+                    `;
                 }
             });
 
             if (!hayBloques) {
-                container.innerHTML = '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg"><p class="text-gray-600 font-bold text-center text-sm">No hay bloques de horno programados en este momento.</p></div>';
+                container.innerHTML = '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg"><p class="text-gray-600 font-bold text-center text-sm">No hay bloques de horno disponibles en este momento.</p></div>';
             }
         } catch (error) {
             container.innerHTML = '<p class="text-red-500 text-center font-bold">Error de conexión. Intenta de nuevo.</p>';
