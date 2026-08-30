@@ -18,9 +18,9 @@ public class Lote {
     @Column(name = "hora_corte", nullable = false)
     private LocalTime horaCorte;
 
-    // Límite físico estricto de 3 unidades por bloque de producción
+    // Se elimina 'final' para permitir actualización dinámica desde el admin panel
     @Column(name = "capacidad_max", nullable = false)
-    private final Integer capacidadMax = 3;
+    private Integer capacidadMax = 3;
 
     @Column(name = "unidades_reservadas", nullable = false)
     private Integer unidadesReservadas = 0;
@@ -42,13 +42,19 @@ public class Lote {
         this.unidadesReservadas += cantidad;
     }
 
-    // Genera los Getters y Setters con IntelliJ (Alt + Insert)
+    // Getters y Setters
     public Long getId() { return id; }
+
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
+
     public LocalTime getHoraCorte() { return horaCorte; }
     public void setHoraCorte(LocalTime horaCorte) { this.horaCorte = horaCorte; }
+
     public Integer getCapacidadMax() { return capacidadMax; }
+    public void setCapacidadMax(Integer capacidadMax) { this.capacidadMax = capacidadMax; }
+
     public Integer getUnidadesReservadas() { return unidadesReservadas; }
+
     public Long getVersion() { return version; }
 }
