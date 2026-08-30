@@ -26,15 +26,15 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
             <span class="text-xs font-bold text-amber-800 uppercase">⚡ Entrega Inmediata</span>
-            <h2 id="contador-inmediata" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+            <h2 id="contador-inmediata" class="text-2xl font-black text-amber-950 mt-1">0 flanes</h2>
         </div>
         <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
             <span class="text-xs font-bold text-amber-800 uppercase">🔥 Horneada 10:00 AM</span>
-            <h2 id="contador-10" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+            <h2 id="contador-10" class="text-2xl font-black text-amber-950 mt-1">0 flanes</h2>
         </div>
         <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
             <span class="text-xs font-bold text-amber-800 uppercase">🔥 Horneada 5:00 PM</span>
-            <h2 id="contador-17" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
+            <h2 id="contador-17" class="text-2xl font-black text-amber-950 mt-1">0 flanes</h2>
         </div>
     </div>
 
@@ -111,9 +111,11 @@
 
             ordenes.forEach(orden => {
                 const modalidad = orden.fechaDeseada || 'INMEDIATA';
-                if (modalidad === 'INMEDIATA') cInmediata += orden.cantidad;
-                else if (modalidad.includes('10:00')) c10 += orden.cantidad;
-                else if (modalidad.includes('17:00')) c17 += orden.cantidad;
+                const cantidadVal = orden.cantidadFlanes !== undefined ? orden.cantidadFlanes : (orden.cantidad || 1);
+
+                if (modalidad === 'INMEDIATA') cInmediata += cantidadVal;
+                else if (modalidad.includes('10:00')) c10 += cantidadVal;
+                else if (modalidad.includes('17:00')) c17 += cantidadVal;
 
                 const badgePago = orden.estado === 'PAGADO'
                     ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">PAGADO</span>'
@@ -121,12 +123,12 @@
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                        <td class="p-3 font-semibold text-gray-900">${orden.cliente ? orden.cliente.nombre : 'N/D'}</td>
-                        <td class="p-3">${orden.cliente ? orden.cliente.telefono : 'N/D'}</td>
-                        <td class="p-3 font-bold">${orden.cantidadFlanes !== undefined ? orden.cantidadFlanes : (orden.cantidad || 1)}</td>
-                        <td class="p-3"><span class="px-2 py-1 bg-amber-100 text-amber-900 rounded text-xs font-medium">${modalidad}</span></td>
-                        <td class="p-3">${badgePago}</td>
-                    `;
+                    <td class="p-3 font-semibold text-gray-900">${orden.cliente ? orden.cliente.nombre : 'N/D'}</td>
+                    <td class="p-3">${orden.cliente ? orden.cliente.telefono : 'N/D'}</td>
+                    <td class="p-3 font-bold">${cantidadVal}</td>
+                    <td class="p-3"><span class="px-2 py-1 bg-amber-100 text-amber-900 rounded text-xs font-medium">${modalidad}</span></td>
+                    <td class="p-3">${badgePago}</td>
+                `;
                 tbody.appendChild(tr);
             });
 
@@ -140,8 +142,12 @@
 
     async function cargarLotes() {
         try {
-            const response = await fetch('/api/lotes');
-            if (!response.ok) throw new Error();
+            let response = await fetch('/api/lotes');
+            if (!response.ok) {
+                // Intento alternativo por si el backend usa prefijo de versión
+                response = await fetch('/api/v1/lotes');
+                if (!response.ok) throw new Error();
+            }
             const lotes = await response.json();
             const tbody = document.getElementById('tabla-lotes');
             tbody.innerHTML = '';
@@ -154,21 +160,21 @@
             lotes.forEach(lote => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                        <td class="p-3 font-mono font-bold">#${lote.id}</td>
-                        <td class="p-3">${lote.horario || 'General'}</td>
-                        <td class="p-3">
-                            <input type="number" id="stock-${lote.id}" value="${lote.cupoMaximo || 3}" class="border border-amber-300 rounded px-2 py-1 w-20 text-center font-bold">
-                        </td>
-                        <td class="p-3">
-                            <button onclick="modificarStock(${lote.id})" class="bg-amber-800 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded transition">
-                                Actualizar Cupo
-                            </button>
-                        </td>
-                    `;
+                    <td class="p-3 font-mono font-bold">#${lote.id}</td>
+                    <td class="p-3">${lote.horario || 'General'}</td>
+                    <td class="p-3">
+                        <input type="number" id="stock-${lote.id}" value="${lote.cupoMaximo || 3}" class="border border-amber-300 rounded px-2 py-1 w-20 text-center font-bold">
+                    </td>
+                    <td class="p-3">
+                        <button onclick="modificarStock(${lote.id})" class="bg-amber-800 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded transition">
+                            Actualizar Cupo
+                        </button>
+                    </td>
+                `;
                 tbody.appendChild(tr);
             });
         } catch (e) {
-            document.getElementById('tabla-lotes').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error al cargar lotes.</td></tr>`;
+            document.getElementById('tabla-lotes').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">Módulo de lotes no disponible o sin ruta configurada.</td></tr>`;
         }
     }
 
