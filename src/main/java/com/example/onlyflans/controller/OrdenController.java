@@ -1,9 +1,12 @@
 package com.example.onlyflans.controller;
 
 import com.example.onlyflans.dto.OrdenRequest;
+import com.example.onlyflans.model.Lote;
 import com.example.onlyflans.model.Orden;
+import com.example.onlyflans.repository.LoteRepository;
 import com.example.onlyflans.repository.OrdenRepository;
 import com.example.onlyflans.service.OrdenService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,33 +19,44 @@ public class OrdenController {
 
     private final OrdenService ordenService;
     private final OrdenRepository ordenRepository;
+    private final LoteRepository loteRepository; // Inyectado para consultar stock
 
-    public OrdenController(OrdenService ordenService, OrdenRepository ordenRepository) {
+    public OrdenController(OrdenService ordenService, OrdenRepository ordenRepository, LoteRepository loteRepository) {
         this.ordenService = ordenService;
         this.ordenRepository = ordenRepository;
+        this.loteRepository = loteRepository;
     }
 
-    // Endpoint para registrar la orden y generar el pago
     @PostMapping
-    public ResponseEntity<String> crearOrden(@RequestBody OrdenRequest request) {
-        String urlPago = ordenService.procesarNuevaOrden(request);
-        return ResponseEntity.ok(urlPago);
+    public ResponseEntity<?> crearOrden(@RequestBody OrdenRequest request) {
+        try {
+            String urlPago = ordenService.procesarNuevaOrden(request);
+            return ResponseEntity.ok(urlPago);
+        } catch (IllegalStateException e) {
+            // 409 Conflict: El usuario intenta reservar más de lo que permite el lote
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error interno del servidor"));
+        }
     }
 
-    // Endpoint GET para que la WebApp del panel liste todas las órdenes (pendientes y pagadas)
     @GetMapping
     public ResponseEntity<List<Orden>> obtenerTodasLasOrdenes() {
-        List<Orden> ordenes = ordenRepository.findAll();
-        return ResponseEntity.ok(ordenes);
+        return ResponseEntity.ok(ordenRepository.findAll());
     }
 
-    // Endpoint Webhook para MercadoPago
+    // Nuevo endpoint para que el panel web renderice las opciones disponibles
+    @GetMapping("/disponibilidad")
+    public ResponseEntity<List<Lote>> obtenerDisponibilidad() {
+        return ResponseEntity.ok(loteRepository.findAll());
+    }
+
+    // Endpoint Webhook para MercadoPago (se mantiene igual)
     @PostMapping("/webhook")
     public ResponseEntity<String> recibirWebhookMercadoPago(
             @RequestParam(value = "type", required = false) String tipo,
             @RequestBody Map<String, Object> payload) {
 
-        // MercadoPago a veces envía el tipo dentro del JSON o como parámetro request
         if (tipo == null && payload.containsKey("type")) {
             tipo = payload.get("type").toString();
         }
@@ -52,13 +66,10 @@ public class OrdenController {
             if (rawData instanceof Map<?, ?> rawMap) {
                 Object idObj = rawMap.get("id");
                 if (idObj != null) {
-                    String paymentId = idObj.toString();
-                    // Procesamos el pago y actualizamos el estado de la orden en la BD
-                    ordenService.procesarNotificacionPago(paymentId);
+                    ordenService.procesarNotificacionPago(idObj.toString());
                 }
             }
         }
-
         return ResponseEntity.ok("EVENT_RECEIVED");
     }
 }

@@ -15,8 +15,8 @@
     </div>
 </header>
 
-<main class="max-w-xl mx-auto px-4 py-8 w-full">
-    <div class="bg-white rounded-2xl shadow-xl p-8 border border-amber-100">
+<main class="max-w-xl mx-auto px-4 py-8 w-full relative">
+    <div class="bg-white rounded-2xl shadow-xl p-8 border border-amber-100 relative z-10">
 
         <!-- Panel de Stock e Inmediata -->
         <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center">
@@ -99,6 +99,23 @@
     </div>
 </main>
 
+<!-- Modal Dinámico de Stock (Capa Z superior) -->
+<div id="modal-stock" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-amber-100">
+        <h3 class="text-xl font-extrabold text-red-600 mb-2">¡Ups! Lote sin capacidad 🍮</h3>
+        <p class="text-sm text-gray-600 mb-4">El horario que elegiste no tiene suficientes flanes para tu orden. Aquí tienes los bloques con disponibilidad en tiempo real:</p>
+
+        <div id="lista-disponibilidad" class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2">
+            <!-- Los bloques disponibles se inyectan dinámicamente aquí -->
+        </div>
+
+        <button onclick="document.getElementById('modal-stock').classList.add('hidden')"
+                class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg hover:bg-gray-300 transition">
+            Cambiar mi selección
+        </button>
+    </div>
+</div>
+
 <footer class="text-center py-4 text-xs text-amber-800/60">
     Only Flans Dark Kitchen &copy; 2026. Control de Lotes Batch-3.
 </footer>
@@ -124,6 +141,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Simulador visual rápido en carga inicial. Idealmente, consumirás el endpoint GET /api/ordenes/disponibilidad aquí también.
         setTimeout(() => {
             const stockEl = document.getElementById('stock-inmediato');
             const badgeEl = document.getElementById('badge-estado');
@@ -153,7 +171,6 @@
         };
 
         try {
-            // Apunta directamente a tu OrdenController en /api/ordenes
             const response = await fetch('/api/ordenes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -161,14 +178,18 @@
             });
 
             if (!response.ok) {
-                alert("Hubo un error al procesar tu orden en el servidor.");
+                if (response.status === 409) {
+                    // 409 Conflict: Intercepción de capa de negocio para re-dirigir a otras franjas horarias
+                    await cargarModalDisponibilidad();
+                } else {
+                    alert("Hubo un error de servidor. Intenta de nuevo.");
+                }
                 btn.disabled = false;
                 btn.innerText = "Confirmar y Pagar 💳";
                 return;
             }
 
             const urlPago = await response.text();
-
             document.getElementById('form-pedido').classList.add('hidden');
             const resultadoDiv = document.getElementById('resultado-pago');
             resultadoDiv.classList.remove('hidden');
@@ -179,6 +200,47 @@
             console.error(error);
             btn.disabled = false;
             btn.innerText = "Confirmar y Pagar 💳";
+        }
+    }
+
+    async function cargarModalDisponibilidad() {
+        try {
+            const res = await fetch('/api/ordenes/disponibilidad');
+            const lotes = await res.json();
+
+            const container = document.getElementById('lista-disponibilidad');
+            container.innerHTML = '';
+
+            let hayOpciones = false;
+
+            lotes.forEach(lote => {
+                const disponibles = lote.capacidadMax - lote.unidadesReservadas;
+
+                if (disponibles > 0) {
+                    hayOpciones = true;
+                    // Jackson serializa LocalTime a string, ej: "23:59:00"
+                    const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
+                    const titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${lote.fecha} - ${lote.horaCorte.substring(0,5)}`;
+                    const color = esInmediata ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+                            <span class="font-bold text-gray-800 text-sm">${titulo}</span>
+                            <span class="text-xs font-bold px-3 py-1 rounded-full ${color}">
+                                ${disponibles} disponibles
+                            </span>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!hayOpciones) {
+                container.innerHTML = '<p class="text-red-500 font-bold text-center">Agotado por completo el día de hoy. Vuelve mañana.</p>';
+            }
+
+            document.getElementById('modal-stock').classList.remove('hidden');
+        } catch (error) {
+            console.error("No se pudo cargar la red de disponibilidad", error);
         }
     }
 </script>
