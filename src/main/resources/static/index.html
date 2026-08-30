@@ -342,6 +342,7 @@
     }
 
     // Modal secundario solo para colisiones de último milisegundo (409)
+    // Modal secundario para colisiones de último milisegundo (409)
     async function cargarModalConflicto() {
         try {
             const res = await fetch('/api/ordenes/disponibilidad');
@@ -357,24 +358,59 @@
                 if (disponibles > 0) {
                     hayOpciones = true;
                     const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
-                    let titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${(lote.fecha === fechaHoy) ? 'Hoy' : 'Mañana'} - ${lote.horaCorte.substring(0, 5)}`;
 
+                    let titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${(lote.fecha === fechaHoy) ? 'Hoy' : 'Mañana'} - ${lote.horaCorte.substring(0, 5)}`;
+                    let valorBloque = esInmediata ? 'INMEDIATA' : `${(lote.fecha === fechaHoy) ? 'HOY' : 'MANANA'}-${lote.horaCorte.substring(0, 5)}`;
+
+                    // Convertimos el <div> informativo en un <button> resolutivo
                     container.innerHTML += `
-                        <div class="flex justify-between items-center p-3 rounded-lg border border-gray-200 bg-gray-50 shadow-sm mb-2">
-                            <span class="font-bold text-sm text-gray-800">${titulo}</span>
-                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-white border border-gray-300">
+                        <button type="button" onclick="resolverConflicto('${valorBloque}', '${titulo}', ${disponibles})"
+                                class="w-full flex justify-between items-center p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition shadow-sm cursor-pointer text-left focus:outline-none mb-2">
+                            <span class="font-bold text-red-950 text-sm tracking-wide">${titulo}</span>
+                            <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white bg-opacity-80 text-red-900 shadow-sm border border-red-100">
                                 ${disponibles} disp.
                             </span>
-                        </div>
+                        </button>
                     `;
                 }
             });
 
-            if (!hayOpciones) container.innerHTML = '<p class="text-red-500 font-bold text-center">Todo agotado.</p>';
+            if (!hayOpciones) {
+                container.innerHTML = '<p class="text-red-500 font-bold text-center">Todo agotado por hoy. ¡Gracias por tu preferencia!</p>';
+            }
+
             document.getElementById('modal-stock').classList.remove('hidden');
         } catch (e) {
             console.error(e);
         }
+    }
+
+    // Auto-corrector que ajusta la cantidad y dispara el submit
+    function resolverConflicto(valorBloque, titulo, maxDisponibles) {
+        document.getElementById('modal-stock').classList.add('hidden');
+
+        // Bajar la cantidad de flanes si pidieron más de los que quedan
+        const inputCantidad = document.getElementById('cantidad');
+        if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
+            inputCantidad.value = maxDisponibles;
+        }
+
+        // Reconfigurar el UI del formulario según lo elegido
+        if (valorBloque === 'INMEDIATA') {
+            document.getElementById('tipoServicio').value = 'INMEDIATA';
+            toggleBloqueHorneado('INMEDIATA');
+        } else {
+            document.getElementById('tipoServicio').value = 'HORNEADA';
+            document.getElementById('seccion-horneado').classList.remove('hidden');
+
+            document.getElementById('bloqueHorneadoValue').value = valorBloque;
+            const textoUI = document.getElementById('texto-horario-elegido');
+            textoUI.innerText = titulo;
+            textoUI.className = "text-amber-900 font-extrabold text-sm uppercase tracking-wide";
+        }
+
+        // Disparar la orden ya corregida
+        document.getElementById('btn-submit').click();
     }
 </script>
 </body>
