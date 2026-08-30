@@ -107,11 +107,17 @@
                 return;
             }
 
-            // Ordenar: Primero los que tengan estado 'PAGADO'
+            // Ordenar: Primero 'PAGADO', y luego agrupado por Lote/Modalidad
             ordenes.sort((a, b) => {
+                // 1. Prioridad al estado de pago
                 if (a.estado === 'PAGADO' && b.estado !== 'PAGADO') return -1;
                 if (a.estado !== 'PAGADO' && b.estado === 'PAGADO') return 1;
-                return 0;
+
+                // 2. Si tienen el mismo estado de pago, agrupar por lote
+                const modA = a.fechaDeseada || 'INMEDIATA';
+                const modB = b.fechaDeseada || 'INMEDIATA';
+
+                return modA.localeCompare(modB);
             });
 
             let cInmediata = 0, c10 = 0, c17 = 0;
