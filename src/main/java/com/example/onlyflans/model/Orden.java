@@ -2,6 +2,7 @@ package com.example.onlyflans.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ordenes")
@@ -21,7 +22,7 @@ public class Orden {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
-    private EstadoOrden estado;
+    private EstadoOrden estado = EstadoOrden.PENDIENTE;
 
     @Column(name = "monto", precision = 10, scale = 2)
     private BigDecimal monto;
@@ -31,10 +32,11 @@ public class Orden {
 
     @Column(name = "fecha_deseada")
     private String fechaDeseada;
-    @Column(name = "fecha_creacion", nullable = false, updatable = false)
-    private java.time.LocalDateTime fechaCreacion;
 
-    // Enum interno para el estado de la orden
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
+
+    // Enum interno para el estado de la orden (alineado con la base de datos y controladores)
     public enum EstadoOrden {
         PENDIENTE,
         PAGADO,
@@ -43,21 +45,17 @@ public class Orden {
     }
 
     // Constructor vacío requerido por JPA (Hibernate)
-    public Orden() {
+    public Orden() {}
+
+    @PrePersist
+    protected void onCreate() {
+        this.fechaCreacion = LocalDateTime.now();
+        if (this.estado == null) {
+            this.estado = EstadoOrden.PENDIENTE;
+        }
     }
 
     // --- Getters y Setters ---
-    @PrePersist
-    protected void onCreate() {
-        this.fechaCreacion = java.time.LocalDateTime.now();
-    }
-    public java.time.LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
 
     public Long getId() {
         return id;
@@ -114,5 +112,12 @@ public class Orden {
     public void setFechaDeseada(String fechaDeseada) {
         this.fechaDeseada = fechaDeseada;
     }
-}
 
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+}

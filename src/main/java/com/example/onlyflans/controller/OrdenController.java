@@ -55,18 +55,19 @@ public class OrdenController {
     public ResponseEntity<?> cancelarOrdenInmediata(@RequestBody Map<String, String> payload) {
         String telefono = payload.get("telefono");
 
-        // Uso del tipado estricto (Enum) y el JOIN dinámico por nombre de método
+        // Búsqueda por cliente y estado PENDIENTE
         Orden ordenReciente = ordenRepository.findFirstByClienteTelefonoAndEstadoOrderByFechaCreacionDesc(telefono, Orden.EstadoOrden.PENDIENTE);
 
         if (ordenReciente != null) {
             Lote lote = ordenReciente.getLote();
             if (lote != null) {
-                // Se devuelve el stock a la cocina
-                lote.setUnidadesReservadas(lote.getUnidadesReservadas() - ordenReciente.getCantidad());
+                // Se devuelve el stock a la cocina asegurando que no baje de 0
+                int stockActualizado = Math.max(0, lote.getUnidadesReservadas() - ordenReciente.getCantidad());
+                lote.setUnidadesReservadas(stockActualizado);
                 loteRepository.save(lote);
             }
-            // Se mata la orden
-            ordenReciente.setEstado(Orden.EstadoOrden.CANCELADA);
+            // Se marca la orden como CANCELADO (alineado con tu enum)
+            ordenReciente.setEstado(Orden.EstadoOrden.CANCELADO);
             ordenRepository.save(ordenReciente);
             return ResponseEntity.ok().build();
         }

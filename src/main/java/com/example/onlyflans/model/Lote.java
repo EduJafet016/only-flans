@@ -56,5 +56,10 @@ public class Lote {
 
     public Integer getUnidadesReservadas() { return unidadesReservadas; }
 
+    // FIX: Mutador necesario para liberar el stock desde el controlador y el Cron Job
+    public void setUnidadesReservadas(Integer unidadesReservadas) {
+        this.unidadesReservadas = unidadesReservadas;
+    }
+
     public Long getVersion() { return version; }
 }
