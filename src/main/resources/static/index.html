@@ -309,9 +309,17 @@
         }
     }
 
-    // Nueva función para mutar el DOM y re-lanzar la petición
-    function aplicarLoteAlternativo(tipo, valorBloque) {
+    // Recibe la cantidad máxima disponible del bloque seleccionado
+    function aplicarLoteAlternativo(tipo, valorBloque, maxDisponibles) {
         document.getElementById('modal-stock').classList.add('hidden');
+
+        // --- NUEVO: Ajuste de stock inteligente ---
+        const inputCantidad = document.getElementById('cantidad');
+        if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
+            inputCantidad.value = maxDisponibles;
+            alert(`⚠️ Solo quedan ${maxDisponibles} flanes en este horario. Hemos ajustado tu pedido automáticamente para que no te quedes sin postre.`);
+        }
+        // ------------------------------------------
 
         const selectTipo = document.getElementById('tipoServicio');
         selectTipo.value = tipo;
@@ -320,7 +328,6 @@
         if (tipo === 'HORNEADA') {
             const selectHorno = document.getElementById('bloqueHorneado');
 
-            // Si el backend devolvió un horario huérfano (ej. un test a las 14:00) que no existe en el HTML estático, lo inyectamos al vuelo.
             const opcionExiste = Array.from(selectHorno.options).some(opt => opt.value === valorBloque);
             if (!opcionExiste) {
                 selectHorno.add(new Option(`🔥 Horario Reasignado: ${valorBloque}`, valorBloque));
@@ -329,7 +336,7 @@
             selectHorno.value = valorBloque;
         }
 
-        // Auto-submit para ejecutar la compra instantáneamente
+        // Auto-submit para ejecutar la compra
         document.getElementById('btn-submit').click();
     }
 
