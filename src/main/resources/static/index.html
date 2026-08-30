@@ -88,15 +88,53 @@
             </button>
         </form>
 
-        <div id="resultado-pago" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-            <h3 class="text-lg font-bold text-green-800 mb-2">¡Orden registrada con éxito! 🎉</h3>
-            <p class="text-sm text-gray-600 mb-4">Completa tu pago para validar tu pedido:</p>
-            <a id="link-mercado-pago" href="#" target="_blank"
-               class="inline-block bg-blue-600 text-white font-bold px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow">
-                Pagar con MercadoPago 💳
-            </a>
+        <div id="resultado-pago" class="hidden mt-6 animate-fade-in">
+            <h3 class="text-xl font-extrabold text-center text-green-700 mb-6">¡Orden registrada con éxito! 🎉</h3>
+
+            <!-- Ticket Visual -->
+            <div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-5 mb-6 relative shadow-sm">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3 text-gray-400 text-sm">
+                    ✂ - - - - - -
+                </div>
+
+                <h4 class="text-center font-bold text-gray-800 border-b border-gray-200 pb-3 mb-4 uppercase text-sm tracking-wider">
+                    Resumen de Pedido
+                </h4>
+
+                <div class="space-y-3 text-sm text-gray-700">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Cantidad:</span>
+                        <span id="ticket-cantidad" class="font-bold text-gray-900 text-lg"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Descripción:</span>
+                        <span class="font-bold text-gray-900">Flan Artesanal Individual</span>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <span class="text-gray-500 mt-1">Modalidad:</span>
+                        <span id="ticket-horario" class="font-bold text-amber-700 text-right w-2/3 bg-amber-50 p-1 rounded"></span>
+                    </div>
+                    <div class="border-t border-gray-200 pt-3 mt-3 flex justify-between items-center text-lg">
+                        <span class="font-extrabold text-gray-800">Total a Pagar:</span>
+                        <span id="ticket-total" class="font-black text-green-700 text-xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-4 text-center">Completa tu pago para asegurar tus flanes:</p>
+
+            <div class="space-y-3">
+                <a id="link-mercado-pago" href="#" target="_blank"
+                   class="block w-full text-center bg-blue-600 text-white font-bold px-6 py-4 rounded-lg hover:bg-blue-700 transition shadow-lg text-lg">
+                    Pagar con MercadoPago 💳
+                </a>
+
+                <button onclick="cancelarYVolver()" type="button"
+                        class="block w-full text-center bg-gray-100 text-gray-600 font-bold px-6 py-3 rounded-lg hover:bg-gray-200 transition">
+                    Cancelar y modificar pedido
+                </button>
+            </div>
         </div>
-    </div>
 </main>
 
 <!-- Modal Dinámico de Stock (Capa Z superior) -->
@@ -188,6 +226,22 @@
             }
 
             const urlPago = await response.text();
+
+            // --- NUEVO: Lógica de llenado del Ticket ---
+            const cantidadSeleccionada = parseInt(document.getElementById('cantidad').value, 10);
+            const totalCalculado = cantidadSeleccionada * 250; // Asumiendo $250 por unidad
+
+            let textoHorario = "⚡ Entrega Inmediata";
+            if (tipoServicio !== 'INMEDIATA') {
+                const selectHorno = document.getElementById('bloqueHorneado');
+                textoHorario = selectHorno.options[selectHorno.selectedIndex].text;
+            }
+
+            document.getElementById('ticket-cantidad').innerText = cantidadSeleccionada;
+            document.getElementById('ticket-horario').innerText = textoHorario;
+            document.getElementById('ticket-total').innerText = `$${totalCalculado.toFixed(2)} MXN`;
+            // -------------------------------------------
+
             document.getElementById('form-pedido').classList.add('hidden');
             const resultadoDiv = document.getElementById('resultado-pago');
             resultadoDiv.classList.remove('hidden');
@@ -279,6 +333,18 @@
         // Auto-submit para ejecutar la compra instantáneamente
         document.getElementById('btn-submit').click();
     }
+
+    function cancelarYVolver() {
+        // Ocultar el ticket y volver a mostrar el formulario
+        document.getElementById('resultado-pago').classList.add('hidden');
+        document.getElementById('form-pedido').classList.remove('hidden');
+
+        // Restaurar el estado del botón principal
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = false;
+        btn.innerText = "Confirmar y Pagar 💳";
+    }
+
 </script>
 </body>
 </html>
