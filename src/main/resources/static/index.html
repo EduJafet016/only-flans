@@ -193,6 +193,7 @@
         }, 500);
     });
 
+    // Motor de calendario dinámico (7 días móviles)
     async function abrirModalHorarios() {
         document.getElementById('modal-seleccion-horario').classList.remove('hidden');
         const container = document.getElementById('lista-horarios-disponibles');
@@ -203,40 +204,55 @@
             const lotesDb = await res.json();
             container.innerHTML = '';
 
-            const fechaHoy = new Date().toLocaleDateString('en-CA');
-            const maxCapacidadDefault = 3; // Límite operativo estándar
-
-            // Plantilla maestra de la Dark Kitchen
-            // Obtenemos la hora actual del cliente
-            const ahora = new Date();
-            const horaActual = ahora.getHours();
-
-            // Plantilla maestra dinámica (Filtra el pasado)
             const horariosPlantilla = [];
+            const ahora = new Date();
+            const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-            // Solo mostramos los de HOY si aún no pasa la hora de corte
-            if (horaActual < 10) {
-                horariosPlantilla.push({ id: 'HOY-10:00', titulo: '🔥 Hoy a las 10:00 AM' });
-            }
-            if (horaActual < 17) {
-                horariosPlantilla.push({ id: 'HOY-17:00', titulo: '🔥 Hoy a las 5:00 PM' });
+            // Bucle iterativo para 7 días
+            for (let i = 0; i < 7; i++) {
+                const fecha = new Date(ahora);
+                fecha.setDate(ahora.getDate() + i);
+                const isHoy = (i === 0);
+
+                // Formateo YYYY-MM-DD
+                const yyyy = fecha.getFullYear();
+                const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+                const dd = String(fecha.getDate()).padStart(2, '0');
+                const fechaStr = `${yyyy}-${mm}-${dd}`;
+
+                const nombreDia = isHoy ? 'Hoy' : `${diasSemana[fecha.getDay()]} ${dd}`;
+
+                // Bloque 10:00 AM (Solo lo agrega si no es hoy, o si es hoy y falta para las 10 AM)
+                if (!isHoy || ahora.getHours() < 10) {
+                    horariosPlantilla.push({
+                        id: `${fechaStr}|10:00`,
+                        titulo: `🔥 ${nombreDia} a las 10:00 AM`,
+                        fechaDb: fechaStr,
+                        horaDb: '10:00'
+                    });
+                }
+
+                // Bloque 5:00 PM (17:00)
+                if (!isHoy || ahora.getHours() < 17) {
+                    horariosPlantilla.push({
+                        id: `${fechaStr}|17:00`,
+                        titulo: `🔥 ${nombreDia} a las 5:00 PM`,
+                        fechaDb: fechaStr,
+                        horaDb: '17:00'
+                    });
+                }
             }
 
-            // Los de mañana siempre están disponibles
-            horariosPlantilla.push({ id: 'MANANA-10:00', titulo: '🔥 Mañana a las 10:00 AM' });
-            horariosPlantilla.push({ id: 'MANANA-17:00', titulo: '🔥 Mañana a las 5:00 PM' });
             let hayBloques = false;
 
+            // Cruce de datos (Data Matching)
             horariosPlantilla.forEach(plantilla => {
-                // Buscamos si el lote ya fue inicializado en la BD por alguna orden previa
                 const loteExistente = lotesDb.find(l => {
-                    const lDia = (l.fecha === fechaHoy) ? 'HOY' : 'MANANA';
-                    const lHora = l.horaCorte.substring(0, 5);
-                    return `${lDia}-${lHora}` === plantilla.id;
+                    const lHora = l.horaCorte.substring(0, 5); // Remueve segundos si existen
+                    return l.fecha === plantilla.fechaDb && lHora === plantilla.horaDb;
                 });
 
-                // Si existe en BD, calculamos el stock real. Si no, tiene el cupo virgen (3).
-                let disponibles = maxCapacidadDefault;
+                let disponibles = 3; // Límite operativo base de tu cocina
                 if (loteExistente) {
                     disponibles = loteExistente.capacidadMax - loteExistente.unidadesReservadas;
                 }
@@ -266,10 +282,10 @@
             });
 
             if (!hayBloques) {
-                container.innerHTML = '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg"><p class="text-gray-600 font-bold text-center text-sm">No hay bloques de horno disponibles en este momento.</p></div>';
+                container.innerHTML = '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg"><p class="text-gray-600 font-bold text-center text-sm">No hay bloques programados.</p></div>';
             }
         } catch (error) {
-            container.innerHTML = '<p class="text-red-500 text-center font-bold">Error de conexión. Intenta de nuevo.</p>';
+            container.innerHTML = '<p class="text-red-500 text-center font-bold">Error de red.</p>';
         }
     }
 
@@ -283,7 +299,7 @@
         const inputCantidad = document.getElementById('cantidad');
         if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
             inputCantidad.value = maxDisponibles;
-            alert(`⚠️ Solo quedan ${maxDisponibles} lugares en el bloque de ${titulo}. Ajustamos tu cantidad automáticamente.`);
+            alert(`⚠️ Solo quedan ${maxDisponibles} lugares en el bloque de ${titulo}. Cantidad ajustada.`);
         }
     }
 
@@ -294,13 +310,13 @@
         const inputHorneado = document.getElementById('bloqueHorneadoValue').value;
 
         if (tipoServicio === 'HORNEADA' && !inputHorneado) {
-            alert("⚠️ Por favor, selecciona un bloque de horneado válido tocando el botón 'Elegir horario'.");
+            alert("⚠️ Selecciona un bloque de horneado.");
             return;
         }
 
         const btn = document.getElementById('btn-submit');
         btn.disabled = true;
-        btn.innerText = "Procesando orden...";
+        btn.innerText = "Procesando...";
 
         const requestData = {
             nombre: document.getElementById('nombre').value,
@@ -320,7 +336,7 @@
                 if (response.status === 409) {
                     await cargarModalConflicto();
                 } else {
-                    alert("Hubo un error de servidor. Intenta de nuevo.");
+                    alert("Error de servidor.");
                 }
                 btn.disabled = false;
                 btn.innerText = "Confirmar y Pagar 💳";
@@ -331,7 +347,7 @@
             generarTicketVisual(requestData.cantidad, tipoServicio, inputHorneado, urlPago);
 
         } catch (error) {
-            alert("Hubo un error de conexión al procesar tu orden.");
+            alert("Error de red.");
             btn.disabled = false;
             btn.innerText = "Confirmar y Pagar 💳";
         }
@@ -357,18 +373,17 @@
     function cancelarYVolver() {
         const telefonoCliente = document.getElementById('telefono').value;
 
-        // Disparamos la liberación inmediata al backend sin bloquear la UI
+        // Disparar liberación inmediata al backend sin bloquear UI
         if(telefonoCliente) {
             fetch('/api/ordenes/cancelar-reciente', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ telefono: telefonoCliente })
-            }).catch(e => console.error("Error liberando stock:", e));
+            }).catch(e => console.error(e));
         }
 
         document.getElementById('resultado-pago').classList.add('hidden');
         document.getElementById('form-pedido').classList.remove('hidden');
-
         const btn = document.getElementById('btn-submit');
         btn.disabled = false;
         btn.innerText = "Confirmar y Pagar 💳";
@@ -381,32 +396,33 @@
             const container = document.getElementById('lista-disponibilidad-conflicto');
             container.innerHTML = '';
 
-            const fechaHoy = new Date().toLocaleDateString('en-CA');
+            const ahora = new Date();
+            const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
             lotes.forEach(lote => {
                 const disponibles = lote.capacidadMax - lote.unidadesReservadas;
                 const esInmediata = lote.horaCorte && lote.horaCorte.startsWith('23:59');
 
-                let titulo = esInmediata ? '⚡ Entrega Inmediata' : `🔥 ${(lote.fecha === fechaHoy) ? 'Hoy' : 'Mañana'} - ${lote.horaCorte.substring(0, 5)}`;
-                let valorBloque = esInmediata ? 'INMEDIATA' : `${(lote.fecha === fechaHoy) ? 'HOY' : 'MANANA'}-${lote.horaCorte.substring(0, 5)}`;
-
                 if (disponibles > 0) {
+                    let titulo = '⚡ Entrega Inmediata';
+                    let valorBloque = 'INMEDIATA';
+
+                    if (!esInmediata) {
+                        // Parsear fecha estricta para evitar desfase de UTC
+                        const fDB = new Date(lote.fecha + 'T00:00:00');
+                        const isHoy = (fDB.toDateString() === ahora.toDateString());
+                        const nombreDia = isHoy ? 'Hoy' : `${diasSemana[fDB.getDay()]} ${fDB.getDate()}`;
+
+                        titulo = `🔥 ${nombreDia} a las ${lote.horaCorte.substring(0, 5)}`;
+                        valorBloque = `${lote.fecha}|${lote.horaCorte.substring(0, 5)}`;
+                    }
+
                     container.innerHTML += `
                         <button type="button" onclick="resolverConflicto('${valorBloque}', '${titulo}', ${disponibles})"
-                                class="w-full flex justify-between items-center p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition shadow-sm cursor-pointer text-left focus:outline-none mb-2">
+                                class="w-full flex justify-between items-center p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition shadow-sm cursor-pointer text-left mb-2">
                             <span class="font-bold text-red-950 text-sm tracking-wide">${titulo}</span>
-                            <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white bg-opacity-80 text-red-900 shadow-sm border border-red-100">
+                            <span class="text-xs font-black px-3 py-1.5 rounded-full bg-white text-red-900 border border-red-100">
                                 ${disponibles} disp.
-                            </span>
-                        </button>
-                    `;
-                } else {
-                    container.innerHTML += `
-                        <button disabled type="button"
-                                class="w-full flex justify-between items-center p-4 rounded-xl border border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed text-left mb-2">
-                            <span class="font-bold text-gray-500 text-sm tracking-wide line-through">${titulo}</span>
-                            <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-gray-200 text-gray-500 shadow-inner border border-gray-300">
-                                Agotado
                             </span>
                         </button>
                     `;
@@ -424,7 +440,7 @@
 
         const btn = document.getElementById('btn-submit');
         btn.disabled = true;
-        btn.innerText = "Procesando orden ajustada...";
+        btn.innerText = "Procesando orden...";
 
         const inputCantidad = document.getElementById('cantidad');
         if (parseInt(inputCantidad.value, 10) > maxDisponibles) {
@@ -445,7 +461,6 @@
             document.getElementById('bloqueHorneadoValue').value = "";
         }
 
-        // Petición fetch aislada del comportamiento HTML
         const requestData = {
             nombre: document.getElementById('nombre').value,
             telefono: document.getElementById('telefono').value,
@@ -461,11 +476,8 @@
             });
 
             if (!response.ok) {
-                if (response.status === 409) {
-                    await cargarModalConflicto();
-                } else {
-                    alert("Hubo un error de servidor. Intenta de nuevo.");
-                }
+                if (response.status === 409) await cargarModalConflicto();
+                else alert("Error del servidor.");
                 btn.disabled = false;
                 btn.innerText = "Confirmar y Pagar 💳";
                 return;
@@ -475,7 +487,7 @@
             generarTicketVisual(requestData.cantidad, tipoServicio, valorBloque, urlPago);
 
         } catch (error) {
-            alert("Hubo un error de conexión al procesar tu orden.");
+            alert("Error de red.");
             btn.disabled = false;
             btn.innerText = "Confirmar y Pagar 💳";
         }

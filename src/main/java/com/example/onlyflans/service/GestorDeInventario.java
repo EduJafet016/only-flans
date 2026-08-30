@@ -27,32 +27,29 @@ public class GestorDeInventario {
         LocalDate fechaAsignada;
         LocalTime horaAsignada;
 
-        // 1. Parseo y transformación de tipos
         if ("INMEDIATA".equals(modalidadOBloque)) {
             fechaAsignada = LocalDate.now();
-            horaAsignada = LocalTime.of(23, 59); // Lote lógico diario para el stock de entrega inmediata
+            horaAsignada = LocalTime.of(23, 59);
         } else {
-            // Descomposición del string "HOY-10:00" o "MANANA-17:00"
-            String[] partes = modalidadOBloque.split("-");
+            // Nuevo motor de parseo dinámico (Ej: "2026-08-31|10:00")
+            String[] partes = modalidadOBloque.split("\\|");
             if (partes.length != 2) {
-                throw new IllegalArgumentException("Formato de bloque inválido: " + modalidadOBloque);
+                throw new IllegalArgumentException("Formato de bloque inválido. Esperado YYYY-MM-DD|HH:mm");
             }
 
-            fechaAsignada = partes[0].equals("HOY") ? LocalDate.now() : LocalDate.now().plusDays(1);
+            fechaAsignada = LocalDate.parse(partes[0]);
             horaAsignada = LocalTime.parse(partes[1], DateTimeFormatter.ofPattern("HH:mm"));
         }
 
-        // 2. Patrón Upsert: Buscar en DB o crear dinámicamente si no existe
+        // Patrón Upsert de lotes
         Lote lote = loteRepository.findByFechaAndHoraCorte(fechaAsignada, horaAsignada)
                 .orElseGet(() -> {
                     Lote nuevoLote = new Lote();
                     nuevoLote.setFecha(fechaAsignada);
                     nuevoLote.setHoraCorte(horaAsignada);
-                    // Persistir el lote vacío primero para que Hibernate le asigne un ID (Primary Key)
                     return loteRepository.save(nuevoLote);
                 });
 
-        // 3. Mutación del estado y control de concurrencia (@Version)
         lote.reservarUnidades(cantidad);
 
         return loteRepository.save(lote);
