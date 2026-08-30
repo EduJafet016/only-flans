@@ -31,6 +31,8 @@ public class Orden {
 
     @Column(name = "fecha_deseada")
     private String fechaDeseada;
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private java.time.LocalDateTime fechaCreacion;
 
     // Enum interno para el estado de la orden
     public enum EstadoOrden {
@@ -45,6 +47,17 @@ public class Orden {
     }
 
     // --- Getters y Setters ---
+    @PrePersist
+    protected void onCreate() {
+        this.fechaCreacion = java.time.LocalDateTime.now();
+    }
+    public java.time.LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
 
     public Long getId() {
         return id;
@@ -102,3 +115,4 @@ public class Orden {
         this.fechaDeseada = fechaDeseada;
     }
 }
+
