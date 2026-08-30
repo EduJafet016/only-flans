@@ -344,8 +344,20 @@
     }
 
     function cancelarYVolver() {
+        const telefonoCliente = document.getElementById('telefono').value;
+
+        // Disparamos la liberación inmediata al backend sin bloquear la UI
+        if(telefonoCliente) {
+            fetch('/api/ordenes/cancelar-reciente', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telefono: telefonoCliente })
+            }).catch(e => console.error("Error liberando stock:", e));
+        }
+
         document.getElementById('resultado-pago').classList.add('hidden');
         document.getElementById('form-pedido').classList.remove('hidden');
+
         const btn = document.getElementById('btn-submit');
         btn.disabled = false;
         btn.innerText = "Confirmar y Pagar 💳";
