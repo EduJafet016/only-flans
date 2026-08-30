@@ -29,18 +29,23 @@ public class OrdenController {
         return ResponseEntity.ok(urlPago);
     }
 
-    // Endpoint GET para que la WebApp del panel liste las órdenes pendientes
+    // Endpoint GET para que la WebApp del panel liste todas las órdenes (pendientes y pagadas)
     @GetMapping
-    public ResponseEntity<List<Orden>> obtenerOrdenesPendientes() {
-        List<Orden> pendientes = ordenRepository.findByEstado(Orden.EstadoOrden.PENDIENTE);
-        return ResponseEntity.ok(pendientes);
+    public ResponseEntity<List<Orden>> obtenerTodasLasOrdenes() {
+        List<Orden> ordenes = ordenRepository.findAll();
+        return ResponseEntity.ok(ordenes);
     }
 
     // Endpoint Webhook para MercadoPago
     @PostMapping("/webhook")
     public ResponseEntity<String> recibirWebhookMercadoPago(
-            @RequestParam("type") String tipo,
+            @RequestParam(value = "type", required = false) String tipo,
             @RequestBody Map<String, Object> payload) {
+
+        // MercadoPago a veces envía el tipo dentro del JSON o como parámetro request
+        if (tipo == null && payload.containsKey("type")) {
+            tipo = payload.get("type").toString();
+        }
 
         if ("payment".equals(tipo)) {
             Object rawData = payload.get("data");
@@ -48,7 +53,8 @@ public class OrdenController {
                 Object idObj = rawMap.get("id");
                 if (idObj != null) {
                     String paymentId = idObj.toString();
-                    System.out.println("Webhook recibido con éxito para el pago ID: " + paymentId);
+                    // Procesamos el pago y actualizamos el estado de la orden en la BD
+                    ordenService.procesarNotificacionPago(paymentId);
                 }
             }
         }

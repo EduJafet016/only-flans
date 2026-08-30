@@ -123,14 +123,13 @@
         }
     }
 
-    // Uso de addEventListener en lugar de window.onload (Elimina el aviso de símbolo deprecado)
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             const stockEl = document.getElementById('stock-inmediato');
             const badgeEl = document.getElementById('badge-estado');
-            if (stockEl) stockEl.innerText = "2 Flanes disponibles";
+            if (stockEl) stockEl.innerText = "Stock disponible";
             if (badgeEl) {
-                badgeEl.innerText = "⚡ Listos para entrega";
+                badgeEl.innerText = "⚡ Listo para ordenar";
                 badgeEl.className = "px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800";
             }
         }, 500);
@@ -154,14 +153,14 @@
         };
 
         try {
-            const response = await fetch('/api/ordenes/checkout', {
+            // Apunta directamente a tu OrdenController en /api/ordenes
+            const response = await fetch('/api/ordenes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestData)
             });
 
             if (!response.ok) {
-                // Manejo directo sin excepciones locales innecesarias
                 alert("Hubo un error al procesar tu orden en el servidor.");
                 btn.disabled = false;
                 btn.innerText = "Confirmar y Pagar 💳";

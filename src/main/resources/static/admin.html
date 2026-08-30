@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Only Flans - Panel de Cocina</title>
+    <title>Only Flans - Panel de Cocina y Stock</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-amber-50 min-h-screen flex flex-col justify-between">
@@ -12,18 +12,18 @@
     <div class="max-w-5xl mx-auto px-4 flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight">🍮 Only Flans - Cocina</h1>
-            <p class="text-xs text-amber-200 mt-1">Monitoreo de lotes y órdenes en tiempo real</p>
+            <p class="text-xs text-amber-200 mt-1">Control operativo, lotes y órdenes en tiempo real</p>
         </div>
-        <button onclick="cargarOrdenes()" class="bg-amber-700 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition shadow">
-            🔄 Actualizar
+        <button onclick="cargarDatos()" class="bg-amber-700 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition shadow">
+            🔄 Actualizar Todo
         </button>
     </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-4 py-8 w-full flex-grow">
+<main class="max-w-5xl mx-auto px-4 py-8 w-full flex-grow space-y-8">
 
-    <!-- Tarjetas de Resumen / Horarios de Hornada -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <!-- Tarjetas de Resumen / Horarios -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-5 rounded-xl shadow border border-amber-100">
             <span class="text-xs font-bold text-amber-800 uppercase">⚡ Entrega Inmediata</span>
             <h2 id="contador-inmediata" class="text-2xl font-black text-amber-950 mt-1">0 órdenes</h2>
@@ -38,10 +38,31 @@
         </div>
     </div>
 
+    <!-- Sección de Gestión de Lotes y Stock -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 border border-amber-100">
+        <h2 class="text-xl font-bold text-amber-900 mb-4">Control de Lotes y Stock 📦</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="border-b border-amber-200 text-xs text-amber-900 uppercase bg-amber-50">
+                    <th class="p-3">ID Lote</th>
+                    <th class="p-3">Horario / Turno</th>
+                    <th class="p-3">Capacidad / Cupo Máximo</th>
+                    <th class="p-3">Acción</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-lotes" class="text-sm text-gray-700 divide-y divide-amber-100">
+                <tr>
+                    <td colspan="4" class="p-4 text-center text-gray-500">Cargando lotes...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Listado de Órdenes -->
     <div class="bg-white rounded-2xl shadow-xl p-6 border border-amber-100">
         <h2 class="text-xl font-bold text-amber-900 mb-4">Órdenes Registradas 📋</h2>
-
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -68,12 +89,15 @@
 </footer>
 
 <script>
+    async class="function" cargarDatos() {
+        await cargarOrdenes();
+        await cargarLotes();
+    }
+
     async function cargarOrdenes() {
         try {
-            // Endpoint que lista las órdenes de tu backend
             const response = await fetch('/api/ordenes');
-            if (!response.ok) throw new Error("Error al obtener las órdenes");
-
+            if (!response.ok) throw new Error();
             const ordenes = await response.json();
             const tbody = document.getElementById('tabla-ordenes');
             tbody.innerHTML = '';
@@ -83,9 +107,7 @@
                 return;
             }
 
-            let cInmediata = 0;
-            let c10 = 0;
-            let c17 = 0;
+            let cInmediata = 0, c10 = 0, c17 = 0;
 
             ordenes.forEach(orden => {
                 const modalidad = orden.fechaDeseada || 'INMEDIATA';
@@ -93,8 +115,8 @@
                 else if (modalidad.includes('10:00')) c10 += orden.cantidad;
                 else if (modalidad.includes('17:00')) c17 += orden.cantidad;
 
-                const badgePago = orden.estado === 'PAGADA'
-                    ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">PAGADA</span>'
+                const badgePago = orden.estado === 'PAGADO'
+                    ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-bold">PAGADO</span>'
                     : '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">PENDIENTE</span>';
 
                 const tr = document.createElement('tr');
@@ -111,17 +133,65 @@
             document.getElementById('contador-inmediata').innerText = `${cInmediata} flanes`;
             document.getElementById('contador-10').innerText = `${c10} flanes`;
             document.getElementById('contador-17').innerText = `${c17} flanes`;
-
-        } catch (error) {
-            console.error(error);
-            document.getElementById('tabla-ordenes').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error de conexión con el servidor.</td></tr>`;
+        } catch (e) {
+            console.error(e);
         }
     }
 
-    // Cargar al iniciar y refrescar cada 15 segundos automáticamente
+    async function cargarLotes() {
+        try {
+            const response = await fetch('/api/lotes');
+            if (!response.ok) throw new Error();
+            const lotes = await response.json();
+            const tbody = document.getElementById('tabla-lotes');
+            tbody.innerHTML = '';
+
+            if (lotes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">No hay lotes configurados.</td></tr>`;
+                return;
+            }
+
+            lotes.forEach(lote => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                        <td class="p-3 font-mono font-bold">#${lote.id}</td>
+                        <td class="p-3">${lote.horario || 'General'}</td>
+                        <td class="p-3">
+                            <input type="number" id="stock-${lote.id}" value="${lote.cupoMaximo || 3}" class="border border-amber-300 rounded px-2 py-1 w-20 text-center font-bold">
+                        </td>
+                        <td class="p-3">
+                            <button onclick="modificarStock(${lote.id})" class="bg-amber-800 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded transition">
+                                Actualizar Cupo
+                            </button>
+                        </td>
+                    `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            document.getElementById('tabla-lotes').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error al cargar lotes.</td></tr>`;
+        }
+    }
+
+    async function modificarStock(loteId) {
+        const nuevoStock = document.getElementById(`stock-${loteId}`).value;
+        try {
+            const response = await fetch(`/api/lotes/${loteId}/stock?nuevoStock=${nuevoStock}`, {
+                method: 'PUT'
+            });
+            if (response.ok) {
+                alert('¡Stock actualizado con éxito!');
+                cargarLotes();
+            } else {
+                alert('Error al actualizar el stock.');
+            }
+        } catch (e) {
+            alert('Error de red al actualizar stock.');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        cargarOrdenes();
-        setInterval(cargarOrdenes, 15000);
+        cargarDatos();
+        setInterval(cargarDatos, 15000);
     });
 </script>
 </body>
