@@ -264,7 +264,6 @@
             container.innerHTML = '';
 
             let hayOpciones = false;
-            // Obtenemos la fecha local del cliente para saber si el lote es de HOY o MAÑANA
             const fechaHoy = new Date().toLocaleDateString('en-CA');
 
             lotes.forEach(lote => {
@@ -281,15 +280,15 @@
 
                     if (!esInmediata) {
                         const dia = (lote.fecha === fechaHoy) ? 'HOY' : 'MANANA';
-                        const hora = lote.horaCorte.substring(0, 5); // Ej: "10:00"
+                        const hora = lote.horaCorte.substring(0, 5);
                         valorBloque = `${dia}-${hora}`;
                         titulo = `🔥 ${dia === 'HOY' ? 'Hoy' : 'Mañana'} - ${hora}`;
                         colorClass = 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-950';
                     }
 
-                    // Renderizamos un <button> en lugar de un <div> para habilitar interacción nativa
+                    // NUEVO: Pasamos la variable 'disponibles' a la función
                     container.innerHTML += `
-                        <button type="button" onclick="aplicarLoteAlternativo('${tipoServicio}', '${valorBloque}')"
+                        <button type="button" onclick="aplicarLoteAlternativo('${tipoServicio}', '${valorBloque}', ${disponibles})"
                                 class="w-full flex justify-between items-center p-3 rounded-lg border shadow-sm transition cursor-pointer mb-2 ${colorClass}">
                             <span class="font-bold text-sm">${titulo}</span>
                             <span class="text-xs font-extrabold px-3 py-1 rounded-full bg-white bg-opacity-70 shadow-inner">
